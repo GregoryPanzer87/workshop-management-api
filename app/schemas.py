@@ -51,8 +51,8 @@ class DeviceResponse(DeviceBase):
 
 class EmployeeDirectoryBase(BaseModel):
     full_name: str
-    national_id: str
-    tax_id: str
+    national_id: int
+    tax_id: int
     short_address: str
     occupation: str
     employee_code: str
@@ -72,18 +72,18 @@ class EmployeeDirectoryResponse(EmployeeDirectoryBase):
         from_attributes = True
 
 # =========================================================================
-#---------------------------------TECHNICALS-------------------------------
+#---------------------------------TECHNICIAN-------------------------------
 # =========================================================================
 
-class TechnicalBase(BaseModel):
+class TechnicianBase(BaseModel):
     commission: Optional[int] = None
 
     employee_id: int
 
-class TechnicalCreate(TechnicalBase):
+class TechnicianCreate(TechnicianBase):
     pass
 
-class TechnicalResponse(TechnicalBase):
+class TechnicianResponse(TechnicianBase):
     id: int
 
     class Config:
@@ -240,7 +240,9 @@ class AttendanceResponse(AttendanceBase):
 
 class UserBase(BaseModel):
     user_name: str
-    permission: Optional[int] = None
+    permission: int
+    is_active: Optional[bool] = False
+
     employee_id: int
 
 class UserCreate(UserBase):
@@ -261,6 +263,7 @@ class AuditLogBase(BaseModel):
     entity: str
     entity_id: int
     details: Optional[str] = None
+
     user_id: int
 
 class AuditLogCreate(AuditLogBase):

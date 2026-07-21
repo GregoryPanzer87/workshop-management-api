@@ -54,11 +54,11 @@ class EmployeeDirectory(Base):
     #Table Columns
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     full_name = Column(String(80), nullable=False)
-    national_id = Column(String(12), nullable=False)
-    tax_id = Column(String(11), nullable=False)
+    national_id = Column(Integer, nullable=False)
+    tax_id = Column(Integer, nullable=False)
     short_address = Column(String(30), nullable=False)
     occupation = Column(String(30), nullable=False)
-    employee_code = Column(String(15), nullable=False)
+    employee_code = Column(String(15), nullable=True)
     entry_date = Column(Date, nullable=False)
     is_active = Column(Boolean, default=True)
     tax_id_doc = Column(String(150), nullable=True)
@@ -66,16 +66,16 @@ class EmployeeDirectory(Base):
     profile_photo = Column(String(150), nullable=True)
 
     #Relationships
-    technicals = relationship("Technical", back_populates="employee")
+    technicians = relationship("Technician", back_populates="employee")
     attendances = relationship("Attendance", back_populates="employee")
-    user = relationship("EmployeeDirectory", back_populates="employee", uselist=False)
+    user = relationship("User", back_populates="employee", uselist=False)
 
 # =========================================================================
-# TABLE TECHNICALS
+# TABLE TECHNICIANS
 # =========================================================================
 
-class Technical(Base):
-    __tablename__ = "technicals"
+class Technician(Base):
+    __tablename__ = "technicians"
 
     #Table Columns
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
@@ -85,8 +85,8 @@ class Technical(Base):
     employee_id = Column(Integer, ForeignKey("employee_directory.id"), nullable=False)
 
     #Relationships
-    employee = relationship("EmployeeDirectory", back_populates="technicals")
-    repairs_orders = relationship("RepairOrder", back_populates="technical")
+    employee = relationship("EmployeeDirectory", back_populates="technicians")
+    repairs_orders = relationship("RepairOrder", back_populates="technician")
 
 # =========================================================================
 # TABLE REPAIRS ORDERS
@@ -106,14 +106,14 @@ class RepairOrder(Base):
     #ForeingKeys
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
     device_id = Column(Integer, ForeignKey("devices.id"), nullable=False)
-    technical_id = Column(Integer, ForeignKey("technicals.id"), nullable=False)
+    technician_id = Column(Integer, ForeignKey("technicians.id"), nullable=False)
 
     #Relationships
     client = relationship("Client", back_populates="repairs_orders")
     device = relationship("Device", back_populates="repairs_orders")
     order_spare_parts = relationship("OrderSparePart", back_populates="repair_order")
     order_services = relationship("OrderService", back_populates="repair_order")
-    technical = relationship("Technical", back_populates="repairs_orders")
+    technician = relationship("Technician", back_populates="repairs_orders")
 
 # =========================================================================
 # TABLE SPARE PARTS
@@ -226,7 +226,8 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_name = Column(String(50), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
-    permission = Column(Integer, nullable=True)
+    permission = Column(Integer, default=4, nullable=True)
+    is_active = Column(Boolean, default=False)
 
     #ForeingKeys
     employee_id = Column(Integer, ForeignKey("employee_directory.id"), nullable=False)

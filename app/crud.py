@@ -2,12 +2,12 @@ from typing import Generic, TypeVar, Type, Optional, List
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from app.models import (
-    Client, Device, EmployeeDirectory, Technical, RepairOrder, 
+    Client, Device, EmployeeDirectory, Technician, RepairOrder, 
     SparePart, OrderSparePart, ServiceType, OrderService, 
     Expense, Attendance, User, AuditLog
     )
 from app.schemas import (
-    ClientCreate, DeviceCreate, EmployeeDirectoryCreate, TechnicalCreate, RepairOrderCreate, 
+    ClientCreate, DeviceCreate, EmployeeDirectoryCreate, TechnicianCreate, RepairOrderCreate, 
     SparePartCreate, OrderSparePartCreate, ServiceTypeCreate, OrderServiceCreate, 
     ExpenseCreate, AttendanceCreate, UserCreate, AuditLogCreate
 )
@@ -44,8 +44,8 @@ class CRUDBase(Generic[ModelType, CreateSchemaType]):
 # SPECIALIST CLASS (INHERITANCE CRUDBase)
 # =========================================================================
 
-# --- CLIENTS CRUD (SAFE DELETE) ---
-class CRUDClient(CRUDBase[Client, ClientCreate]):
+# --- CLIENT CRUD (SAFE DELETE) ---
+class ClientCRUD(CRUDBase[Client, ClientCreate]):
     def remove_safely(self, db: Session, client_id: int):
         """Attempt to delete a client safely"""
         db_client = self.get(db, client_id)
@@ -62,7 +62,7 @@ class CRUDClient(CRUDBase[Client, ClientCreate]):
 
 
 # --- EMPLOYEE CRUD (LOGIC DELETE) ---
-class CRUDEmployee(CRUDBase[EmployeeDirectory, EmployeeDirectoryCreate]):
+class EmployeeCRUD(CRUDBase[EmployeeDirectory, EmployeeDirectoryCreate]):
     def deactivate(self, db: Session, employee_id: int):
         """Deactivate an employee (is_active = False) instead of deleting it"""
         db_employee = self.get(db, employee_id)
@@ -75,10 +75,10 @@ class CRUDEmployee(CRUDBase[EmployeeDirectory, EmployeeDirectoryCreate]):
 
 
 # --- TECHNICAL CRUD (JOIN) ---
-class CRUDTechnical(CRUDBase[Technical, TechnicalCreate]):
+class TechnicianCRUD(CRUDBase[Technician, TechnicianCreate]):
     def get_by_code(self, db: Session, employee_code: str):
-        """Search a technical using the employee code"""
-        return db.query(Technical).\
+        """Search a technician using the employee code"""
+        return db.query(Technician).\
             join(EmployeeDirectory).\
             filter(EmployeeDirectory.employee_code == employee_code).first()
 
@@ -87,10 +87,10 @@ class CRUDTechnical(CRUDBase[Technical, TechnicalCreate]):
 # 3. READY-TO-USE INSTANCES FOR MAIN
 # =========================================================================
 
-crud_client = CRUDClient(Client)
+crud_client = ClientCRUD(Client)
 crud_device = CRUDBase[Device, DeviceCreate](Device)
-crud_employee = CRUDEmployee(EmployeeDirectory)
-crud_technical = CRUDTechnical(Technical)
+crud_employee = EmployeeCRUD(EmployeeDirectory)
+crud_technician = TechnicianCRUD(Technician)
 crud_repair_order = CRUDBase[RepairOrder, RepairOrderCreate](RepairOrder)
 crud_spare_part = CRUDBase[SparePart, SparePartCreate](SparePart)
 crud_order_spare_part = CRUDBase[OrderSparePart, OrderSparePartCreate](OrderSparePart)
