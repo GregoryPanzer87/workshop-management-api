@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
-from datetime import date
+from datetime import date, datetime
 from enum import Enum
 
 
@@ -57,6 +57,7 @@ class EmployeeDirectoryBase(BaseModel):
     occupation: str
     employee_code: str
     entry_date: date
+    is_active: bool
     tax_id_doc: Optional[str] = None
     national_id_doc: Optional[str] = None
     profile_photo: Optional[str] = None
@@ -100,6 +101,7 @@ class StatusOrderEnum(str, Enum):
 
 class RepairOrderBase(BaseModel):
     entry_date: date
+    is_warranty: bool
     status: Optional[StatusOrderEnum] = StatusOrderEnum.PENDING
     agreed_price: Optional[int] = None
     exit_date: Optional[date] = None
@@ -136,7 +138,7 @@ class SparePartResponse(SparePartBase):
         from_attributes = True
 
 # =========================================================================
-#---------------------------------OORDER SPARE PARTS------------------------
+#---------------------------------ORDER SPARE PARTS------------------------
 # =========================================================================
 
 class OrderSparePartBase(BaseModel):
@@ -228,6 +230,45 @@ class AttendanceCreate(AttendanceBase):
 
 class AttendanceResponse(AttendanceBase):
     id: int
+
+    class Config:
+        from_attributes = True
+
+# =========================================================================
+#-----------------------------------USERS----------------------------------
+# =========================================================================
+
+class UserBase(BaseModel):
+    user_name: str
+    permission: Optional[int] = None
+    employee_id: int
+
+class UserCreate(UserBase):
+    password: str
+
+class UserResponse(UserBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+# =========================================================================
+#---------------------------------AUDITLOG---------------------------------
+# =========================================================================
+
+class AuditLogBase(BaseModel):
+    action: str
+    entity: str
+    entity_id: int
+    details: Optional[str] = None
+    user_id: int
+
+class AuditLogCreate(AuditLogBase):
+    pass
+
+class AuditLogResponse(AuditLogBase):
+    id: int
+    created_at: datetime
 
     class Config:
         from_attributes = True
