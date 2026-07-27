@@ -9,9 +9,9 @@ from enum import Enum
 # =========================================================================
 
 class ClientBase(BaseModel):
-    national_id_type: str
-    national_id: str
-    name: Optional[str] = None
+    national_id_type: Optional[str] = None
+    national_id: Optional[str] = None
+    name: str
     phone: Optional[str] = None
     mail: Optional[EmailStr] = None
     short_address: Optional[str] = None
@@ -24,6 +24,14 @@ class ClientResponse(ClientBase):
 
     class Config:
         from_attributes = True
+
+class ClientUpdate(BaseModel):
+    national_id_type: Optional[str] = None
+    national_id: Optional[str] = None
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    mail: Optional[EmailStr] = None
+    short_address: Optional[str] = None
 
 # =========================================================================
 #---------------------------------DEVICES---------------------------------
@@ -45,19 +53,27 @@ class DeviceResponse(DeviceBase):
     class Config:
         from_attributes = True
 
+class DeviceUpdate(BaseModel):
+    client_id: Optional[int] = None
+    device_type: Optional[str] = None
+    brand: Optional[str] = None
+    model: Optional[str] = None
+    serial_number: Optional[str] = None
+
 # =========================================================================
 #---------------------------------EMPLOYEE DIRECTORY-----------------------
 # =========================================================================
 
 class EmployeeDirectoryBase(BaseModel):
     full_name: str
+    national_id_type: str
     national_id: int
     tax_id: int
     short_address: str
     occupation: str
     employee_code: str
     entry_date: date
-    is_active: bool
+    is_active: Optional[bool] = True
     tax_id_doc: Optional[str] = None
     national_id_doc: Optional[str] = None
     profile_photo: Optional[str] = None
@@ -70,6 +86,19 @@ class EmployeeDirectoryResponse(EmployeeDirectoryBase):
 
     class Config:
         from_attributes = True
+
+class EmployeeDirectoryUpdate(BaseModel):
+    full_name: Optional[str] = None
+    national_id: Optional[int] = None
+    tax_id: Optional[int] = None
+    short_address: Optional[str] = None
+    occupation: Optional[str] = None
+    employee_code: Optional[str] = None
+    entry_date: Optional[date] = None
+    is_active: Optional[bool] = None
+    tax_id_doc: Optional[str] = None
+    national_id_doc: Optional[str] = None
+    profile_photo: Optional[str] = None
 
 # =========================================================================
 #---------------------------------TECHNICIAN-------------------------------
@@ -88,6 +117,11 @@ class TechnicianResponse(TechnicianBase):
 
     class Config:
         from_attributes = True
+
+class TechnicianUpdate(BaseModel):
+    commission: Optional[int] = None
+
+    employee_id: Optional[int] = None
 
 # =========================================================================
 #---------------------------------REPAIRS ORDERS---------------------------
@@ -108,7 +142,7 @@ class RepairOrderBase(BaseModel):
 
     client_id: int
     device_id: int
-    technical_id: int
+    technician_id: int
 
 class RepairOrderCreate(RepairOrderBase):
     pass
@@ -118,6 +152,17 @@ class RepairOrderResponse(RepairOrderBase):
 
     class Config:
         from_attributes = True
+
+class RepairOrderUpdate(BaseModel):
+    entry_date: Optional[date] = None
+    is_warranty: Optional[bool] = None
+    status: Optional[StatusOrderEnum] = None
+    agreed_price: Optional[int] = None
+    exit_date: Optional[date] = None
+
+    client_id: Optional[int] = None
+    device_id: Optional[int] = None
+    technician_id: Optional[int] = None
 
 # =========================================================================
 #---------------------------------SPARE PARTS------------------------------
@@ -136,6 +181,11 @@ class SparePartResponse(SparePartBase):
 
     class Config:
         from_attributes = True
+
+class SparePartUpdate(BaseModel):
+    name: Optional[str] = None
+    stock: Optional[int] = None
+    price: Optional[int] = None
 
 # =========================================================================
 #---------------------------------ORDER SPARE PARTS------------------------
@@ -156,6 +206,10 @@ class OrderSparePartResponse(OrderSparePartBase):
     class Config:
         from_attributes = True
 
+class OrderSparePartUpdate(BaseModel):
+    repair_order_id: Optional[int] = None
+    spare_part_id: Optional[int] = None
+
 # =========================================================================
 #---------------------------------SERVICE TYPES----------------------------
 # =========================================================================
@@ -173,6 +227,10 @@ class ServiceTypeResponse(ServiceTypeBase):
     class Config:
         from_attributes = True
 
+class ServiceTypeUpdate(BaseModel):
+    name: Optional[str] = None
+    price: Optional[int] = None
+
 # =========================================================================
 #---------------------------------ORDER SERVICES----------------------------
 # =========================================================================
@@ -189,6 +247,10 @@ class OrderServiceResponse(OrderServiceBase):
 
     class Config:
         from_attributes = True
+
+class OrderServiceUpdate(BaseModel):
+    repair_order_id: Optional[int] = None
+    service_types_id: Optional[int] = None
 
 # =========================================================================
 #---------------------------------EXPENSE----------------------------------
@@ -208,6 +270,12 @@ class ExpenseResponse(ExpenseBase):
 
     class Config:
         from_attributes = True
+
+class ExpenseUpdate(BaseModel):
+    description: Optional[str] = None
+    amount: Optional[int] = None
+    expense_date: Optional[date] = None
+    category: Optional[str] = None
 
 # =========================================================================
 #---------------------------------ATTENDANCE-------------------------------
@@ -234,6 +302,12 @@ class AttendanceResponse(AttendanceBase):
     class Config:
         from_attributes = True
 
+class AttendanceUpdate(BaseModel):
+    date: Optional[date]
+    status: Optional[StatusAttendanceEnum]
+
+    employee_id: Optional[int] = None
+
 # =========================================================================
 #-----------------------------------USERS----------------------------------
 # =========================================================================
@@ -241,7 +315,7 @@ class AttendanceResponse(AttendanceBase):
 class UserBase(BaseModel):
     user_name: str
     permission: int
-    is_active: Optional[bool] = False
+    is_active: bool = True
 
     employee_id: int
 
@@ -253,6 +327,14 @@ class UserResponse(UserBase):
 
     class Config:
         from_attributes = True
+
+class UserUpdate(BaseModel):
+    user_name: Optional[str] = None
+    permission: Optional[int] = None
+    is_active: Optional[bool] = None
+    password: Optional[str] = None
+
+    employee_id: Optional[int] = None
 
 # =========================================================================
 #---------------------------------AUDITLOG---------------------------------
@@ -275,3 +357,31 @@ class AuditLogResponse(AuditLogBase):
 
     class Config:
         from_attributes = True
+
+class AuditLogUpdate(BaseModel):
+    pass
+
+# =========================================================================
+#----------------------------------STORAGE---------------------------------
+# =========================================================================
+
+class StorageBase(BaseModel):
+    entry_date: date
+    column: str
+
+    device_id: int
+
+class StorageCreate(StorageBase):
+    pass
+
+class StorageResponse(StorageBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+class StorageUpdate(BaseModel):
+    entry_date: Optional[date] = None
+    column: Optional[str] = None
+
+    device_id: Optional[int] = None
