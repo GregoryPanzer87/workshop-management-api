@@ -43,6 +43,7 @@ class Device(Base):
     #Relationships
     client = relationship("Client", back_populates="devices")
     repairs_orders = relationship("RepairOrder", back_populates="device")
+    storage = relationship("Storage", back_populates="device")
 
 # =========================================================================
 # TABLE EMPLOYEE DIRECTORY
@@ -254,3 +255,20 @@ class AuditLog(Base):
 
     #Relationships
     user = relationship("User", back_populates="logs")
+
+# =========================================================================
+# TABLE STORAGE
+# =========================================================================
+
+class Storage(Base):
+    __tablename__ = "storage"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    entry_date = Column(Date, nullable=False)
+    column = Column(String(3), nullable=False)
+
+    #ForeingKeys
+    device_id = Column(Integer, ForeignKey("devices.id"), nullable=False)
+
+    #Relationships
+    device = relationship("Device", back_populates="storage")
