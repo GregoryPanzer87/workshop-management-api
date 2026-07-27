@@ -1,15 +1,22 @@
-from typing import Generic, TypeVar, Type, Optional, List
+from typing import Generic, TypeVar, Type, Optional, List, Any
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from pydantic import BaseModel
 from app.models import (
     Client, Device, EmployeeDirectory, Technician, RepairOrder, 
     SparePart, OrderSparePart, ServiceType, OrderService, 
-    Expense, Attendance, User, AuditLog
+    Expense, Attendance, User, AuditLog, Storage
     )
 from app.schemas import (
     ClientCreate, DeviceCreate, EmployeeDirectoryCreate, TechnicianCreate, RepairOrderCreate, 
     SparePartCreate, OrderSparePartCreate, ServiceTypeCreate, OrderServiceCreate, 
-    ExpenseCreate, AttendanceCreate, UserCreate, AuditLogCreate
+    ExpenseCreate, AttendanceCreate, UserCreate, AuditLogCreate, StorageCreate
+)
+
+from app.schemas import (
+    ClientUpdate, DeviceUpdate, EmployeeDirectoryUpdate, TechnicianUpdate, RepairOrderUpdate, 
+    SparePartUpdate, OrderSparePartUpdate, ServiceTypeUpdate, OrderServiceUpdate, 
+    ExpenseUpdate, AttendanceUpdate, UserUpdate, AuditLogUpdate, StorageUpdate
 )
 
 # =========================================================================
@@ -18,18 +25,25 @@ from app.schemas import (
 
 ModelType = TypeVar("ModelType")
 CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
+UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 
-class CRUDBase(Generic[ModelType, CreateSchemaType]):
+class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     def __init__(self, model: Type[ModelType]):
         self.model = model
+
+    #---------------------------------------------------------------------------------------
 
     def get(self, db: Session, id: int) -> Optional[ModelType]:
         """Get a record by its ID"""
         return db.query(self.model).filter(self.model.id == id).first()
 
+    #---------------------------------------------------------------------------------------
+
     def get_multi(self, db: Session, skip: int = 0, limit: int = 100) -> List[ModelType]:
         """Retrieves a list of paginated records"""
         return db.query(self.model).offset(skip).limit(limit).all()
+
+    #---------------------------------------------------------------------------------------
 
     def create(self, db: Session, obj_in: CreateSchemaType) -> ModelType:
         """Create a new record using Pydantic v2 (model_dump)"""
@@ -39,13 +53,54 @@ class CRUDBase(Generic[ModelType, CreateSchemaType]):
         db.commit()
         db.refresh(db_obj)
         return db_obj
+
+    #---------------------------------------------------------------------------------------
+
+    def search(
+        self, 
+        db: Session, 
+        query: str, 
+        search_fields: List[Any], 
+        limit: int = 20
+    ) -> List[ModelType]:
+        """Busca clientes por nombre, identificación o teléfono."""
+        if not query or not query.strip():
+            return self.get_multi(db, limit=limit)
+
+        # 2. Limpiamos el texto ingresado
+        clean_query = query.strip()
+        search_pattern = f"%{clean_query}%"
+        
+        # 3. Construimos los filtros solo con los campos válidos
+        filters = [field.ilike(search_pattern) for field in search_fields if field is not None]
+
+        # 4. Si por alguna razón no hay filtros válidos, no ejecutamos or_()
+        if not filters:
+            return self.get_multi(db, limit=limit)
+
+        # 5. Ejecutamos la consulta con or_
+        return db.query(self.model).filter(or_(*filters)).limit(limit).all()
+
+    #---------------------------------------------------------------------------------------
+    
+    def update(self, db: Session, db_obj: ModelType, obj_in: UpdateSchemaType) -> ModelType:
+        update_data = obj_in.model_dump(exclude_unset=True)
+
+        for field, value in update_data.items():
+            setattr(db_obj, field, value)
+
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+
+        return db_obj
     
 # =========================================================================
 # SPECIALIST CLASS (INHERITANCE CRUDBase)
 # =========================================================================
 
 # --- CLIENT CRUD (SAFE DELETE) ---
-class ClientCRUD(CRUDBase[Client, ClientCreate]):
+class ClientCRUD(CRUDBase[Client, ClientCreate, ClientUpdate]):
     def remove_safely(self, db: Session, client_id: int):
         """Attempt to delete a client safely"""
         db_client = self.get(db, client_id)
@@ -53,16 +108,30 @@ class ClientCRUD(CRUDBase[Client, ClientCreate]):
             return None
         
         # Validación defensiva si tiene ordenes asociadas
-        if hasattr(db_client, 'repair_orders') and db_client.repair_orders:
+        if hasattr(db_client, 'repairs_orders') and db_client.repairs_orders:
             raise ValueError("No se puede eliminar un cliente con historial de reparaciones.")
             
         db.delete(db_client)
         db.commit()
         return db_client
 
+# --- DIVICE CRUD (SAFE DELETE) ---
+class DeviceCRUD(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
+    def update_owner(self, db: Session, device_id: int, new_client_id: int) -> Device:
+        """Assign id_client to a new client without changes to the history"""
+        db_device = self.get(db, id=device_id)
+
+        if not db_device:
+            return None
+        
+        db_device.client_id = new_client_id
+        db.commit()
+        db.refresh(db_device)
+        return db_device
+
 
 # --- EMPLOYEE CRUD (LOGIC DELETE) ---
-class EmployeeCRUD(CRUDBase[EmployeeDirectory, EmployeeDirectoryCreate]):
+class EmployeeCRUD(CRUDBase[EmployeeDirectory, EmployeeDirectoryCreate, EmployeeDirectoryUpdate]):
     def deactivate(self, db: Session, employee_id: int):
         """Deactivate an employee (is_active = False) instead of deleting it"""
         db_employee = self.get(db, employee_id)
@@ -74,29 +143,40 @@ class EmployeeCRUD(CRUDBase[EmployeeDirectory, EmployeeDirectoryCreate]):
         return None
 
 
-# --- TECHNICAL CRUD (JOIN) ---
-class TechnicianCRUD(CRUDBase[Technician, TechnicianCreate]):
+# --- TECHNICIAN CRUD (JOIN) ---
+class TechnicianCRUD(CRUDBase[Technician, TechnicianCreate, TechnicianUpdate]):
     def get_by_code(self, db: Session, employee_code: str):
         """Search a technician using the employee code"""
         return db.query(Technician).\
             join(EmployeeDirectory).\
             filter(EmployeeDirectory.employee_code == employee_code).first()
 
+# --- STORAGE CRUD (DELETE) ---
+class StorageCRUD(CRUDBase[Storage, StorageCreate, StorageUpdate]):
+    def remove_safely(self, db: Session, device_id: int):
+        db_storage = self.get(db, device_id)
+        if not db_storage:
+            return None
+
+        db.delete(db_storage)
+        db.commit()
+        return db_storage
 
 # =========================================================================
 # 3. READY-TO-USE INSTANCES FOR MAIN
 # =========================================================================
 
 crud_client = ClientCRUD(Client)
-crud_device = CRUDBase[Device, DeviceCreate](Device)
+crud_device = DeviceCRUD(Device)
 crud_employee = EmployeeCRUD(EmployeeDirectory)
 crud_technician = TechnicianCRUD(Technician)
-crud_repair_order = CRUDBase[RepairOrder, RepairOrderCreate](RepairOrder)
-crud_spare_part = CRUDBase[SparePart, SparePartCreate](SparePart)
-crud_order_spare_part = CRUDBase[OrderSparePart, OrderSparePartCreate](OrderSparePart)
-crud_service_type = CRUDBase[ServiceType, ServiceTypeCreate](ServiceType)
-crud_order_service = CRUDBase[OrderService, OrderServiceCreate](OrderService)
-crud_expense = CRUDBase[Expense, ExpenseCreate](Expense)
-crud_attendance = CRUDBase[Attendance, AttendanceCreate](Attendance)
-crud_user = CRUDBase[User, UserCreate](User)
-crud_audit = CRUDBase[AuditLog, AuditLogCreate](AuditLog)
+crud_repair_order = CRUDBase[RepairOrder, RepairOrderCreate, RepairOrderUpdate](RepairOrder)
+crud_spare_part = CRUDBase[SparePart, SparePartCreate, SparePartUpdate](SparePart)
+crud_order_spare_part = CRUDBase[OrderSparePart, OrderSparePartCreate, OrderSparePartUpdate](OrderSparePart)
+crud_service_type = CRUDBase[ServiceType, ServiceTypeCreate, ServiceTypeUpdate](ServiceType)
+crud_order_service = CRUDBase[OrderService, OrderServiceCreate, OrderServiceUpdate](OrderService)
+crud_expense = CRUDBase[Expense, ExpenseCreate, ExpenseUpdate](Expense)
+crud_attendance = CRUDBase[Attendance, AttendanceCreate, AttendanceUpdate](Attendance)
+crud_user = CRUDBase[User, UserCreate, UserUpdate](User)
+crud_audit = CRUDBase[AuditLog, AuditLogCreate, AuditLogUpdate](AuditLog)
+crud_storage = StorageCRUD(Storage)
