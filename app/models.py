@@ -12,16 +12,16 @@ class Client(Base):
 
     #Table Columns
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    national_id_type = Column(String(2), nullable=False)
-    national_id = Column(String(15), nullable=False)
+    national_id = Column(String(20), nullable=False)
     name = Column(String(50), nullable=True)
     phone = Column(String(20), nullable=True)
-    mail = Column(String(50), nullable=True)
+    mail = Column(String(200), unique=True, nullable=True)
     short_address = Column(String(50), nullable=True)
 
     #Relationships
     devices = relationship("Device", back_populates="client")
     repairs_orders = relationship("RepairOrder", back_populates="client")
+    user = relationship("User", back_populates="client")
 
 # =========================================================================
 # TABLE DEVICES
@@ -223,18 +223,20 @@ class Attendance(Base):
 class User(Base):
     __tablename__ = "users"
 
-    #Table Columns
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    user_name = Column(String(50), unique=True, nullable=False)
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(50), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
-    permission = Column(Integer, default=4, nullable=True)
-    is_active = Column(Boolean, default=False)
-
-    #ForeingKeys
-    employee_id = Column(Integer, ForeignKey("employee_directory.id"), nullable=False)
+    is_active = Column(Boolean, default=True)
+    mail = Column(String(200), unique=True, nullable=True)
+    role = Column(String(60), nullable=False)
+    
+    # Llaves foráneas opcionales
+    employee_id = Column(Integer, ForeignKey("employee_directory.id"), nullable=True)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=True)
 
     #Relationships
     employee = relationship("EmployeeDirectory", back_populates="user")
+    client = relationship("Client", back_populates="user")
     logs = relationship("AuditLog", back_populates="user")
 
 # =========================================================================

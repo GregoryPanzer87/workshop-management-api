@@ -6,16 +6,17 @@ from app.database import get_db
 from app.crud import crud_client
 from app.models import Client
 from app.schemas import ClientCreate, ClientResponse, ClientUpdate
-from app.api.deps import require_max_permission_level
+from app.api.deps import require_roles
+from app.core.security import LEVEL_BASIC, LEVEL_MEDIUM, LEVEL_ADVANCE, LEVEL_PROFESSIONAL
 
 router = APIRouter(prefix="/clients", tags=["Clients"])
 
-@router.post("/", response_model=ClientResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=ClientResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_roles(LEVEL_MEDIUM))])
 def create_client(client_in: ClientCreate, db: Session = Depends(get_db)):
     """Create a new client in the database."""
     return crud_client.create(db, obj_in=client_in)
 
-@router.get("/", response_model=List[ClientResponse])
+@router.get("/", response_model=List[ClientResponse], dependencies=[Depends(require_roles(LEVEL_BASIC))])
 def read_clients(
     q: Optional[str] = None, 
     skip: int = 0, 
@@ -43,7 +44,7 @@ def read_clients(
 
     return crud_client.get_multi(db, skip=skip, limit=limit)
 
-@router.patch("/{client_id}", response_model=ClientResponse)
+@router.patch("/{client_id}", response_model=ClientResponse, dependencies=[Depends(require_roles(LEVEL_MEDIUM))])
 def update_client(client_id: int, client_in: ClientUpdate, db: Session = Depends(get_db)):
     """Update a client partially or completely."""
     db_client = crud_client.get(db, id=client_id)
@@ -54,7 +55,7 @@ def update_client(client_id: int, client_in: ClientUpdate, db: Session = Depends
         )
     return crud_client.update(db, db_obj=db_client, obj_in=client_in)
 
-@router.delete("/{client_id}", dependencies=[Depends(require_max_permission_level(2))])
+@router.delete("/{client_id}", dependencies=[Depends(require_roles(LEVEL_ADVANCE))])
 def delete_client(client_id: int, db: Session = Depends(get_db)):
     try:
         deleted_client = crud_client.delete(db, client_id=client_id)

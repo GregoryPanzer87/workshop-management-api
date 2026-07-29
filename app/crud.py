@@ -19,6 +19,8 @@ from app.schemas import (
     ExpenseUpdate, AttendanceUpdate, UserUpdate, AuditLogUpdate, StorageUpdate
 )
 
+from app.core.security import get_password_hash
+
 # =========================================================================
 # GENERIC CLASS (CRUDBase)
 # =========================================================================
@@ -126,7 +128,7 @@ class ClientCRUD(CRUDBase[Client, ClientCreate, ClientUpdate]):
         db.commit()
         return db_client
 
-# --- DIVICE CRUD (CHANGE OWNER) ---
+# --- DEVICE CRUD (CHANGE OWNER) ---
 class DeviceCRUD(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
     def update_owner(self, db: Session, device_id: int, new_client_id: int) -> Device:
         """Assign id_client to a new client without changes to the history"""
@@ -140,6 +142,7 @@ class DeviceCRUD(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         db.refresh(db_device)
         return db_device
 
+# --- REPAIR ORDER CRUD (SAFE DELETE) ---
 class RepairOrderCRUD(CRUDBase[RepairOrder, RepairOrderCreate, RepairOrderUpdate]):
     def delete(self, db: Session, id: int) -> Optional[RepairOrder]:
         """Attempt to delete a order repair safely"""
@@ -187,6 +190,25 @@ class StorageCRUD(CRUDBase[Storage, StorageCreate, StorageUpdate]):
         db.commit()
         return db_storage
 
+# --- USER CRUD ---
+class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
+    def create(self, db: Session, *, obj_in: UserCreate) -> User:
+        db_user = User(
+            username=obj_in.username,
+            hashed_password=get_password_hash(obj_in.password),
+            permission=obj_in.permission,
+            is_active=obj_in.is_active,
+            employee_id=obj_in.employee_id
+        )
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        return db_user
+
+    def get_by_user(self, db: Session, user: str) -> Optional[User]:
+        """Get a record by its username"""
+        return db.query(User).filter(User.username == user).first()
+
 # =========================================================================
 # 3. READY-TO-USE INSTANCES FOR MAIN
 # =========================================================================
@@ -202,6 +224,6 @@ crud_service_type = CRUDBase[ServiceType, ServiceTypeCreate, ServiceTypeUpdate](
 crud_order_service = CRUDBase[OrderService, OrderServiceCreate, OrderServiceUpdate](OrderService)
 crud_expense = CRUDBase[Expense, ExpenseCreate, ExpenseUpdate](Expense)
 crud_attendance = CRUDBase[Attendance, AttendanceCreate, AttendanceUpdate](Attendance)
-crud_user = CRUDBase[User, UserCreate, UserUpdate](User)
+crud_user = UserCRUD(User)
 crud_audit = CRUDBase[AuditLog, AuditLogCreate, AuditLogUpdate](AuditLog)
 crud_storage = StorageCRUD(Storage)

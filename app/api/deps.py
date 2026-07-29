@@ -1,18 +1,19 @@
-from typing import Generator
+from typing import List
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 import jwt
 from pydantic import ValidationError
+import os
+from dotenv import load_dotenv
 
 from app.core.security import SECRET_KEY, ALGORITHM
 from app.crud import crud_user
-from app.database import SessionLocal
 from app.models import User
+from app.schemas import UserRole
 from app.database import get_db
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
-
 
 def get_current_user(
     db: Session = Depends(get_db), 
@@ -44,15 +45,14 @@ def get_current_user(
 
     return user
     
-def require_max_permission_level(max_level: int):
-    """
-    Allows access according to user.permission.
-    """
-    def permission_checker(current_user: User = Depends(get_current_user)):
-        if current_user.permission > max_level:
+def require_roles(allowed_roles: List[UserRole]):
+    """Permite el acceso si el rol del usuario está incluido en 'allowed_roles'."""
+    def role_checker(current_user: User = Depends(get_current_user)):
+        if current_user.role not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="No tienes los permisos suficientes para esta acción"
+                detail="No tienes permisos para realizar esta acción."
             )
         return current_user
-    return permission_checker
+
+    return role_checker

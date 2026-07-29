@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from passlib.context import CryptContext
+from app.schemas import UserRole
 import os
 from dotenv import load_dotenv
 import jwt
@@ -10,6 +11,10 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
+LEVEL_BASIC = [UserRole.ADMIN, UserRole.DIRECTOR, UserRole.OPERATOR, UserRole.TECHNICIAN]
+LEVEL_MEDIUM = [UserRole.ADMIN, UserRole.DIRECTOR, UserRole.OPERATOR]
+LEVEL_ADVANCE = [UserRole.ADMIN, UserRole.DIRECTOR]
+LEVEL_PROFESSIONAL = [UserRole.ADMIN]
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

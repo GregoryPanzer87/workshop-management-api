@@ -9,7 +9,6 @@ from enum import Enum
 # =========================================================================
 
 class ClientBase(BaseModel):
-    national_id_type: Optional[str] = None
     national_id: Optional[str] = None
     name: str
     phone: Optional[str] = None
@@ -26,7 +25,6 @@ class ClientResponse(ClientBase):
         from_attributes = True
 
 class ClientUpdate(BaseModel):
-    national_id_type: Optional[str] = None
     national_id: Optional[str] = None
     name: Optional[str] = None
     phone: Optional[str] = None
@@ -127,7 +125,7 @@ class TechnicianUpdate(BaseModel):
 #---------------------------------REPAIRS ORDERS---------------------------
 # =========================================================================
 
-class StatusOrderEnum(str, Enum):
+class StatusOrder(str, Enum):
     PENDING = "Pendiente"
     IN_PROGRESS = "En proceso"
     READY = "Listo"
@@ -136,7 +134,7 @@ class StatusOrderEnum(str, Enum):
 class RepairOrderBase(BaseModel):
     entry_date: date
     is_warranty: bool
-    status: Optional[StatusOrderEnum] = StatusOrderEnum.PENDING
+    status: Optional[StatusOrder] = StatusOrder.PENDING
     agreed_price: Optional[int] = None
     exit_date: Optional[date] = None
 
@@ -156,7 +154,7 @@ class RepairOrderResponse(RepairOrderBase):
 class RepairOrderUpdate(BaseModel):
     entry_date: Optional[date] = None
     is_warranty: Optional[bool] = None
-    status: Optional[StatusOrderEnum] = None
+    status: Optional[StatusOrder] = None
     agreed_price: Optional[int] = None
     exit_date: Optional[date] = None
 
@@ -281,7 +279,7 @@ class ExpenseUpdate(BaseModel):
 #---------------------------------ATTENDANCE-------------------------------
 # =========================================================================
 
-class StatusAttendanceEnum(str, Enum):
+class StatusAttendance(str, Enum):
     PRESENT = "Presente"
     ABSENT = "Ausente"
     PERMISSION = "Permiso"
@@ -289,7 +287,7 @@ class StatusAttendanceEnum(str, Enum):
 
 class AttendanceBase(BaseModel):
     date_now: date
-    status: Optional[StatusAttendanceEnum] = StatusAttendanceEnum.ABSENT
+    status: Optional[StatusAttendance] = StatusAttendance.ABSENT
 
     employee_id: int
 
@@ -304,7 +302,7 @@ class AttendanceResponse(AttendanceBase):
 
 class AttendanceUpdate(BaseModel):
     date: Optional[date]
-    status: Optional[StatusAttendanceEnum]
+    status: Optional[StatusAttendance]
 
     employee_id: Optional[int] = None
 
@@ -312,11 +310,20 @@ class AttendanceUpdate(BaseModel):
 #-----------------------------------USERS----------------------------------
 # =========================================================================
 
+class UserRole(str, Enum):
+    ADMIN = "Admin"
+    DIRECTOR = "Director"
+    OPERATOR = "Operator"
+    TECHNICIAN = "Technician"
+    CLIENT = "Client"
+
 class UserBase(BaseModel):
-    user_name: str
+    username: str
     permission: int
     is_active: bool = True
-
+    mail: Optional[str] = None
+    status: Optional[UserRole] = UserRole.CLIENT
+    
     employee_id: int
 
 class UserCreate(UserBase):
@@ -332,6 +339,8 @@ class UserUpdate(BaseModel):
     user_name: Optional[str] = None
     permission: Optional[int] = None
     is_active: Optional[bool] = None
+    mail: Optional[str] = None
+    status: Optional[UserRole] = None
     password: Optional[str] = None
 
     employee_id: Optional[int] = None
