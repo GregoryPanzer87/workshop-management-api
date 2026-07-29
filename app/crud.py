@@ -94,16 +94,27 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         db.refresh(db_obj)
 
         return db_obj
-    
+
+    def delete(self, db: Session, id: int) -> Optional[ModelType]:
+        db_delete = self.get(db, id)
+
+        if not db_delete:
+            return None
+        
+        db.delete(db_delete)
+        db.commit()
+
+        return db_delete
+        
 # =========================================================================
 # SPECIALIST CLASS (INHERITANCE CRUDBase)
 # =========================================================================
 
 # --- CLIENT CRUD (SAFE DELETE) ---
 class ClientCRUD(CRUDBase[Client, ClientCreate, ClientUpdate]):
-    def remove_safely(self, db: Session, client_id: int):
+    def delete(self, db: Session, id: int) :
         """Attempt to delete a client safely"""
-        db_client = self.get(db, client_id)
+        db_client = self.get(db, id)
         if not db_client:
             return None
         
@@ -115,7 +126,7 @@ class ClientCRUD(CRUDBase[Client, ClientCreate, ClientUpdate]):
         db.commit()
         return db_client
 
-# --- DIVICE CRUD (SAFE DELETE) ---
+# --- DIVICE CRUD (CHANGE OWNER) ---
 class DeviceCRUD(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
     def update_owner(self, db: Session, device_id: int, new_client_id: int) -> Device:
         """Assign id_client to a new client without changes to the history"""
@@ -129,6 +140,20 @@ class DeviceCRUD(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         db.refresh(db_device)
         return db_device
 
+class OrderRepairCRUD(CRUDBase[RepairOrder, RepairOrderCreate, RepairOrderUpdate]):
+    def delete(self, db: Session, id: int) -> Optional[RepairOrder]:
+        """Attempt to delete a order repair safely"""
+        db_order_repair = self.get(db, id)
+        if not db_order_repair:
+            return None
+            
+        # Validación defensiva si tiene ordenes asociadas
+        if (hasattr(db_order_repair, 'order_spare_parts') and db_order_repair.order_spare_parts) or (hasattr(db_order_repair, 'order_services') and db_order_repair.order_services):
+            raise ValueError("No se puede eliminar una orden con repuestos o servicios realizados.")
+                
+        db.delete(db_order_repair)
+        db.commit()
+        return db_order_repair
 
 # --- EMPLOYEE CRUD (LOGIC DELETE) ---
 class EmployeeCRUD(CRUDBase[EmployeeDirectory, EmployeeDirectoryCreate, EmployeeDirectoryUpdate]):

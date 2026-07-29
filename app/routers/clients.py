@@ -43,7 +43,7 @@ def read_clients(
 
     return crud_client.get_multi(db, skip=skip, limit=limit)
 
-@router.put("/{client_id}", response_model=ClientResponse)
+@router.patch("/{client_id}", response_model=ClientResponse)
 def update_client(client_id: int, client_in: ClientUpdate, db: Session = Depends(get_db)):
     """Update a client partially or completely."""
     db_client = crud_client.get(db, id=client_id)
@@ -57,7 +57,7 @@ def update_client(client_id: int, client_in: ClientUpdate, db: Session = Depends
 @router.delete("/{client_id}", dependencies=[Depends(require_max_permission_level(2))])
 def delete_client(client_id: int, db: Session = Depends(get_db)):
     try:
-        deleted_client = crud_client.remove_safely(db, client_id=client_id)
+        deleted_client = crud_client.delete(db, client_id=client_id)
         if not deleted_client:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, 
