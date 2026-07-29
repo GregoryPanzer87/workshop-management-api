@@ -140,7 +140,7 @@ class DeviceCRUD(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         db.refresh(db_device)
         return db_device
 
-class OrderRepairCRUD(CRUDBase[RepairOrder, RepairOrderCreate, RepairOrderUpdate]):
+class RepairOrderCRUD(CRUDBase[RepairOrder, RepairOrderCreate, RepairOrderUpdate]):
     def delete(self, db: Session, id: int) -> Optional[RepairOrder]:
         """Attempt to delete a order repair safely"""
         db_order_repair = self.get(db, id)
@@ -195,7 +195,7 @@ crud_client = ClientCRUD(Client)
 crud_device = DeviceCRUD(Device)
 crud_employee = EmployeeCRUD(EmployeeDirectory)
 crud_technician = TechnicianCRUD(Technician)
-crud_repair_order = CRUDBase[RepairOrder, RepairOrderCreate, RepairOrderUpdate](RepairOrder)
+crud_repair_order = RepairOrderCRUD(RepairOrder)
 crud_spare_part = CRUDBase[SparePart, SparePartCreate, SparePartUpdate](SparePart)
 crud_order_spare_part = CRUDBase[OrderSparePart, OrderSparePartCreate, OrderSparePartUpdate](OrderSparePart)
 crud_service_type = CRUDBase[ServiceType, ServiceTypeCreate, ServiceTypeUpdate](ServiceType)

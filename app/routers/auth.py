@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from app.models import User
+from app.schemas import UserCreate, UserResponse, UserUpdate
+from app.crud import crud_user
 
 from app.api.deps import get_db
 from app.core.security import verify_password, create_access_token
-from app.models import User
+from app.api.deps import require_max_permission_level
 
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
 
@@ -34,3 +37,8 @@ def login(
         "access_token": access_token, 
         "token_type": "bearer"
     }
+
+@router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_max_permission_level(2))])
+def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
+    """Create a new user in the database."""
+    return crud_user.create(db, obj_in=user_in)
