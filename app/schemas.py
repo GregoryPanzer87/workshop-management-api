@@ -21,8 +21,7 @@ class ClientCreate(ClientBase):
 class ClientResponse(ClientBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 class ClientUpdate(BaseModel):
     national_id: Optional[str] = None
@@ -48,8 +47,7 @@ class DeviceCreate(DeviceBase):
 class DeviceResponse(DeviceBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 class DeviceUpdate(BaseModel):
     client_id: Optional[int] = None
@@ -64,9 +62,8 @@ class DeviceUpdate(BaseModel):
 
 class EmployeeDirectoryBase(BaseModel):
     full_name: str
-    national_id_type: str
-    national_id: int
-    tax_id: int
+    national_id: str
+    tax_id: str
     short_address: str
     occupation: str
     employee_code: str
@@ -82,13 +79,12 @@ class EmployeeDirectoryCreate(EmployeeDirectoryBase):
 class EmployeeDirectoryResponse(EmployeeDirectoryBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 class EmployeeDirectoryUpdate(BaseModel):
     full_name: Optional[str] = None
-    national_id: Optional[int] = None
-    tax_id: Optional[int] = None
+    national_id: Optional[str] = None
+    tax_id: Optional[str] = None
     short_address: Optional[str] = None
     occupation: Optional[str] = None
     employee_code: Optional[str] = None
@@ -113,8 +109,7 @@ class TechnicianCreate(TechnicianBase):
 class TechnicianResponse(TechnicianBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 class TechnicianUpdate(BaseModel):
     commission: Optional[int] = None
@@ -147,9 +142,10 @@ class RepairOrderCreate(RepairOrderBase):
 
 class RepairOrderResponse(RepairOrderBase):
     id: int
+    client: Optional[ClientResponse] = None
+    device: Optional[DeviceResponse] = None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 class RepairOrderUpdate(BaseModel):
     entry_date: Optional[date] = None
@@ -177,8 +173,7 @@ class SparePartCreate(SparePartBase):
 class SparePartResponse(SparePartBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 class SparePartUpdate(BaseModel):
     name: Optional[str] = None
@@ -201,10 +196,10 @@ class OrderSparePartCreate(OrderSparePartBase):
 class OrderSparePartResponse(OrderSparePartBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 class OrderSparePartUpdate(BaseModel):
+    quantity: Optional[int] = None
     repair_order_id: Optional[int] = None
     spare_part_id: Optional[int] = None
 
@@ -222,8 +217,7 @@ class ServiceTypeCreate(ServiceTypeBase):
 class ServiceTypeResponse(ServiceTypeBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 class ServiceTypeUpdate(BaseModel):
     name: Optional[str] = None
@@ -243,8 +237,7 @@ class OrderServiceCreate(OrderServiceBase):
 class OrderServiceResponse(OrderServiceBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 class OrderServiceUpdate(BaseModel):
     repair_order_id: Optional[int] = None
@@ -266,8 +259,7 @@ class ExpenseCreate(ExpenseBase):
 class ExpenseResponse(ExpenseBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 class ExpenseUpdate(BaseModel):
     description: Optional[str] = None
@@ -283,7 +275,7 @@ class StatusAttendance(str, Enum):
     PRESENT = "Presente"
     ABSENT = "Ausente"
     PERMISSION = "Permiso"
-    HEALT = "Salud"
+    HEALTH = "Salud"
 
 class AttendanceBase(BaseModel):
     date_now: date
@@ -297,12 +289,11 @@ class AttendanceCreate(AttendanceBase):
 class AttendanceResponse(AttendanceBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 class AttendanceUpdate(BaseModel):
-    date: Optional[date]
-    status: Optional[StatusAttendance]
+    date_now: Optional[date] = None
+    status: Optional[StatusAttendance] = None
 
     employee_id: Optional[int] = None
 
@@ -319,12 +310,12 @@ class UserRole(str, Enum):
 
 class UserBase(BaseModel):
     username: str
-    permission: int
     is_active: bool = True
-    mail: Optional[str] = None
-    status: Optional[UserRole] = UserRole.CLIENT
+    mail: Optional[EmailStr] = None
+    role: Optional[UserRole] = UserRole.CLIENT
     
-    employee_id: int
+    employee_id: Optional[int] = None
+    client_id: Optional[int] = None
 
 class UserCreate(UserBase):
     password: str
@@ -332,18 +323,17 @@ class UserCreate(UserBase):
 class UserResponse(UserBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 class UserUpdate(BaseModel):
-    user_name: Optional[str] = None
-    permission: Optional[int] = None
+    username: Optional[str] = None
     is_active: Optional[bool] = None
-    mail: Optional[str] = None
-    status: Optional[UserRole] = None
+    mail: Optional[EmailStr] = None
+    role: Optional[UserRole] = None
     password: Optional[str] = None
 
     employee_id: Optional[int] = None
+    client_id: Optional[int] = None
 
 # =========================================================================
 #---------------------------------AUDITLOG---------------------------------
@@ -364,8 +354,7 @@ class AuditLogResponse(AuditLogBase):
     id: int
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 class AuditLogUpdate(BaseModel):
     pass
@@ -386,8 +375,7 @@ class StorageCreate(StorageBase):
 class StorageResponse(StorageBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 class StorageUpdate(BaseModel):
     entry_date: Optional[date] = None

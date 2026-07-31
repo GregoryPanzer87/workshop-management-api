@@ -42,10 +42,13 @@ def login(
 @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_roles(LEVEL_ADVANCE))])
 def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
     """Create a new user in the database."""
+    print("Inicio create_user")
     db_user = crud_user.get_by_user(db, user=user_in.username)
+    print("Paso a db_user")
     if db_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Ya existe un usuario registrado con ese nombre de usuario"
         )
+    print("Paso al return")
     return crud_user.create(db, obj_in=user_in)

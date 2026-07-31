@@ -15,7 +15,7 @@ class Client(Base):
     national_id = Column(String(20), nullable=False)
     name = Column(String(50), nullable=True)
     phone = Column(String(20), nullable=True)
-    mail = Column(String(200), unique=True, nullable=True)
+    mail = Column(String(100), unique=True, nullable=True)
     short_address = Column(String(50), nullable=True)
 
     #Relationships
@@ -55,8 +55,8 @@ class EmployeeDirectory(Base):
     #Table Columns
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     full_name = Column(String(80), nullable=False)
-    national_id = Column(Integer, nullable=False)
-    tax_id = Column(Integer, nullable=False)
+    national_id = Column(String(20), nullable=False)
+    tax_id = Column(String(20), nullable=False)
     short_address = Column(String(30), nullable=False)
     occupation = Column(String(30), nullable=False)
     employee_code = Column(String(15), nullable=True)
@@ -227,7 +227,7 @@ class User(Base):
     username = Column(String(50), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True)
-    mail = Column(String(200), unique=True, nullable=True)
+    mail = Column(String(100), unique=True, nullable=True)
     role = Column(String(60), nullable=False)
     
     # Llaves foráneas opcionales

@@ -193,12 +193,18 @@ class StorageCRUD(CRUDBase[Storage, StorageCreate, StorageUpdate]):
 # --- USER CRUD ---
 class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
     def create(self, db: Session, *, obj_in: UserCreate) -> User:
+        emp_id = obj_in.employee_id if obj_in.employee_id != 0 else None
+        cli_id = obj_in.client_id if obj_in.client_id != 0 else None
+
         db_user = User(
             username=obj_in.username,
-            hashed_password=get_password_hash(obj_in.password),
-            permission=obj_in.permission,
+            password=get_password_hash(obj_in.password),
             is_active=obj_in.is_active,
-            employee_id=obj_in.employee_id
+            mail=obj_in.mail,
+            role=obj_in.role,
+
+            employee_id=emp_id,
+            client_id=cli_id
         )
         db.add(db_user)
         db.commit()
