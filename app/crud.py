@@ -2,23 +2,36 @@ from typing import Generic, TypeVar, Type, Optional, List, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from pydantic import BaseModel
-from app.models import (
-    Client, Device, EmployeeDirectory, Technician, RepairOrder, 
-    SparePart, OrderSparePart, ServiceType, OrderService, 
-    Expense, Attendance, User, AuditLog, Storage
+from app import (
+    # Client
+    Client, ClientCreate, ClientUpdate,
+    # Device
+    Device, DeviceCreate, DeviceUpdate,
+    # Employee
+    EmployeeDirectory, EmployeeDirectoryCreate, EmployeeDirectoryUpdate,
+    # Technician
+    Technician, TechnicianCreate, TechnicianUpdate,
+    # Repair Order
+    RepairOrder, RepairOrderCreate, RepairOrderUpdate,
+    # Spare Part
+    SparePart, SparePartCreate, SparePartUpdate,
+    # Order Spare Part
+    OrderSparePart, OrderSparePartCreate, OrderSparePartUpdate,
+    # Service Type
+    ServiceType, ServiceTypeCreate, ServiceTypeUpdate,
+    # Order Service
+    OrderService, OrderServiceCreate, OrderServiceUpdate,
+    # Expense
+    Expense, ExpenseCreate, ExpenseUpdate,
+    # Attendace
+    Attendance, AttendanceCreate, AttendanceUpdate,
+    # User
+    User, UserCreate, UserUpdate,
+    # AuditLog
+    AuditLog, AuditLogCreate, AuditLogUpdate,
+    #Storage
+    Storage, StorageCreate, StorageUpdate,
     )
-from app.schemas import (
-    ClientCreate, DeviceCreate, EmployeeDirectoryCreate, TechnicianCreate, RepairOrderCreate, 
-    SparePartCreate, OrderSparePartCreate, ServiceTypeCreate, OrderServiceCreate, 
-    ExpenseCreate, AttendanceCreate, UserCreate, AuditLogCreate, StorageCreate
-)
-
-from app.schemas import (
-    ClientUpdate, DeviceUpdate, EmployeeDirectoryUpdate, TechnicianUpdate, RepairOrderUpdate, 
-    SparePartUpdate, OrderSparePartUpdate, ServiceTypeUpdate, OrderServiceUpdate, 
-    ExpenseUpdate, AttendanceUpdate, UserUpdate, AuditLogUpdate, StorageUpdate
-)
-
 from app.core.security import get_password_hash
 
 # =========================================================================
@@ -44,6 +57,19 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     def get_multi(self, db: Session, skip: int = 0, limit: int = 100) -> List[ModelType]:
         """Retrieves a list of paginated records"""
         return db.query(self.model).offset(skip).limit(limit).all()
+
+    #---------------------------------------------------------------------------------------
+    
+    def get_other_id(self, db: Session, id: int, field: str, skip: int = 0, limit: int = 20) -> List[ModelType]:
+    # Si RepairOrder tiene directamente client_id:
+        column = getattr(self.model, field)
+        return (
+            db.query(self.model)
+            .filter(column == id)
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
     #---------------------------------------------------------------------------------------
 
