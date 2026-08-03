@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from passlib.context import CryptContext
-from app.schemas import UserRole
+from app import UserRole
 import os
 from dotenv import load_dotenv
 import jwt

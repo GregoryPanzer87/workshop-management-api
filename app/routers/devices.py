@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import cast, String
 from app.database import get_db
 from app.crud import crud_device
-from app.models import Device
-from app.schemas import DeviceCreate, DeviceResponse, DeviceUpdate
+from app.models_repairs import Device
+from app import Device, DeviceCreate, DeviceResponse, DeviceUpdate, crud_device
 from app.api.deps import require_roles
 from app.core.security import LEVEL_BASIC, LEVEL_MEDIUM, LEVEL_ADVANCE, LEVEL_PROFESSIONAL
 

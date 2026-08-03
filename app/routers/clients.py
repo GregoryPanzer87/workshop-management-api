@@ -4,8 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import cast, String
 from app.database import get_db
 from app.crud import crud_client
-from app.models import Client
-from app.schemas import ClientCreate, ClientResponse, ClientUpdate
+from app import Client, ClientCreate, ClientResponse, ClientUpdate, crud_client
 from app.api.deps import require_roles
 from app.core.security import LEVEL_BASIC, LEVEL_MEDIUM, LEVEL_ADVANCE, LEVEL_PROFESSIONAL
 

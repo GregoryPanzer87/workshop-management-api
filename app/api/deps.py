@@ -4,14 +4,9 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 import jwt
 from pydantic import ValidationError
-import os
-from dotenv import load_dotenv
 
 from app.core.security import SECRET_KEY, ALGORITHM
-from app.crud import crud_user
-from app.models import User
-from app.schemas import UserRole
-from app.database import get_db
+from app import User, UserRole, crud_user, get_db
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
