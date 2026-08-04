@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app import User, UserCreate, UserResponse, UserUpdate, crud_user, get_db
 from app.core.security import verify_password, create_access_token
 from app.api.deps import require_roles
-from app.core.security import LEVEL_BASIC, LEVEL_MEDIUM, LEVEL_ADVANCE, LEVEL_PROFESSIONAL
+from app.core.security import LEVEL_ADVANCE
 
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
 

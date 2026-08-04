@@ -7,9 +7,9 @@ from app.crud import crud_device
 from app.models_repairs import Device
 from app import Device, DeviceCreate, DeviceResponse, DeviceUpdate, crud_device
 from app.api.deps import require_roles
-from app.core.security import LEVEL_BASIC, LEVEL_MEDIUM, LEVEL_ADVANCE, LEVEL_PROFESSIONAL
+from app.core import LEVEL_BASIC, LEVEL_MEDIUM
 
-router = APIRouter(prefix="/devices", tags=["devices"])
+router = APIRouter(prefix="/devices", tags=["Devices"])
 
 @router.post("/", response_model=DeviceResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_roles(LEVEL_MEDIUM))])
 def create_device(device_in: DeviceCreate, db: Session = Depends(get_db)):
@@ -25,29 +25,40 @@ def read_devices(
 ):
     """Retrieves a paginated list of customers or performs a real-time search by sending 'q'."""
     if q and q.strip():
-        search_result = crud_device.search(
+        return crud_device.search(
             db=db, 
             query=q, 
             search_fields=[cast(Device.client_id, String), Device.device_type, Device.brand, Device.model, Device.serial_number], 
             limit=limit
         )
-        if not search_result:
-            raise HTTPException(
-                                status_code=status.HTTP_404_NOT_FOUND, 
-                                detail={
-                                "message": f"No se encontraron coincidencias para '{q}'",
-                                "query": q,
-                                "search_fields": ["Nombre", "Telefono", "Cedula/RIF", "Direccion"]
-                                }
-                            )
-        return search_result
-
     return crud_device.get_multi(db, skip=skip, limit=limit)
+
+@router.get("/{device_id}", response_model=DeviceResponse, dependencies=[Depends(require_roles(LEVEL_BASIC))])
+def read_device_by_id(device_id: int, db: Session = Depends(get_db)):
+    """Retrieves a single repair order by its ID."""
+    db_device = crud_device.get_by_id(db, id=device_id)
+    if not db_device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Orden de reparacion no encontrada"
+        )
+    return db_device
+
+@router.get("/client/{client_id}", response_model=List[DeviceResponse], dependencies=[Depends(require_roles(LEVEL_BASIC))])
+def read_devices_by_client(
+    client_id: int,
+    skip: int = 0,
+    limit: int = 20,
+    db: Session = Depends(get_db)
+):
+    """Retrieves a paginated list of device for a specific client."""
+    orders = crud_device.get_other_id(db=db, id=client_id, field="client_id", skip=skip, limit=limit)
+    return orders
 
 @router.patch("/{device_id}", response_model=DeviceResponse, dependencies=[Depends(require_roles(LEVEL_MEDIUM))])
 def update_device(device_id: int, device_in: DeviceUpdate, db: Session = Depends(get_db)):
     """Update a device partially or completely."""
-    db_device = crud_device.get(db, id=device_id)
+    db_device = crud_device.get_by_id(db, id=device_id)
     if not db_device:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 

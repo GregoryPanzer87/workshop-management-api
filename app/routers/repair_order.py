@@ -3,11 +3,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import cast, String
 from app.database import get_db
-from app import RepairOrder, RepairOrderCreate, RepairOrderResponse, RepairOrderUpdate, crud_repair_order
+from app import RepairOrder, RepairOrderCreate, RepairOrderResponse, RepairOrderDetailResponse, RepairOrderUpdate, crud_repair_order
 from app.api.deps import require_roles
-from app.core.security import LEVEL_BASIC, LEVEL_MEDIUM, LEVEL_ADVANCE, LEVEL_PROFESSIONAL
+from app.core import LEVEL_BASIC, LEVEL_MEDIUM, LEVEL_ADVANCE
 
-router = APIRouter(prefix="/repairs_orders", tags=["repairs_orders"])
+router = APIRouter(prefix="/repairs_orders", tags=["Repairs Orders"])
 
 @router.post("/", response_model=RepairOrderResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_roles(LEVEL_MEDIUM))])
 def create_repiar_order(repair_order_in: RepairOrderCreate, db: Session = Depends(get_db)):
@@ -23,25 +23,25 @@ def read_repairs_orders(
 ):
     """Retrieves a paginated list of repairs orders or performs a real-time search by sending 'q'."""
     if q and q.strip():
-        search_result = crud_repair_order.search(
+        return crud_repair_order.search(
             db=db, 
             query=q, 
             search_fields=[cast(RepairOrder.id, String), cast(RepairOrder.entry_date, String), 
                            RepairOrder.status, cast(RepairOrder.exit_date, String)], 
             limit=limit
         )
-        if not search_result:
-            raise HTTPException(
-                                status_code=status.HTTP_404_NOT_FOUND, 
-                                detail={
-                                "message": f"No se encontraron coincidencias para '{q}'",
-                                "query": q,
-                                "search_fields": ["ID", "Fecha de Entrada", "Estado", "Fecha de Salida"]
-                                }
-                            )
-        return search_result
-
     return crud_repair_order.get_multi(db, skip=skip, limit=limit)
+
+@router.get("/{repair_order_id}", response_model=RepairOrderDetailResponse, dependencies=[Depends(require_roles(LEVEL_BASIC))])
+def read_repair_order_by_id(repair_order_id: int, db: Session = Depends(get_db)):
+    """Retrieves a single repair order by its ID."""
+    db_repair_order = crud_repair_order.get_by_id(db, id=repair_order_id)
+    if not db_repair_order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Orden de reparacion no encontrada"
+        )
+    return db_repair_order
 
 @router.get("/client/{client_id}", response_model=List[RepairOrderResponse], dependencies=[Depends(require_roles(LEVEL_BASIC))])
 def read_repair_orders_by_client(
@@ -68,7 +68,7 @@ def read_repair_orders_by_device(
 @router.patch("/{repair_order_id}", response_model=RepairOrderResponse, dependencies=[Depends(require_roles(LEVEL_BASIC))])
 def update_repair_order(repair_order_id: int, repair_order_in: RepairOrderUpdate, db: Session = Depends(get_db)):
     """Update a repair order partially or completely."""
-    db_repair_order = crud_repair_order.get(db, id=repair_order_id)
+    db_repair_order = crud_repair_order.get_by_id(db, id=repair_order_id)
     if not db_repair_order:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 

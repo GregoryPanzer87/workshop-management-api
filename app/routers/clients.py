@@ -6,7 +6,7 @@ from app.database import get_db
 from app.crud import crud_client
 from app import Client, ClientCreate, ClientResponse, ClientUpdate, crud_client
 from app.api.deps import require_roles
-from app.core.security import LEVEL_BASIC, LEVEL_MEDIUM, LEVEL_ADVANCE, LEVEL_PROFESSIONAL
+from app.core import LEVEL_BASIC, LEVEL_MEDIUM, LEVEL_ADVANCE
 
 router = APIRouter(prefix="/clients", tags=["Clients"])
 
@@ -24,29 +24,18 @@ def read_clients(
 ):
     """Retrieves a paginated list of customers or performs a real-time search by sending 'q'."""
     if q and q.strip():
-        search_result = crud_client.search(
+        return crud_client.search(
             db=db, 
             query=q, 
             search_fields=[Client.name, cast(Client.national_id, String), Client.phone, Client.short_address], 
             limit=limit
         )
-        if not search_result:
-            raise HTTPException(
-                                status_code=status.HTTP_404_NOT_FOUND, 
-                                detail={
-                                "message": f"No se encontraron coincidencias para '{q}'",
-                                "query": q,
-                                "search_fields": ["Nombre", "Telefono", "Cedula/RIF", "Direccion"]
-                                }
-                            )
-        return search_result
-
     return crud_client.get_multi(db, skip=skip, limit=limit)
 
 @router.patch("/{client_id}", response_model=ClientResponse, dependencies=[Depends(require_roles(LEVEL_MEDIUM))])
 def update_client(client_id: int, client_in: ClientUpdate, db: Session = Depends(get_db)):
     """Update a client partially or completely."""
-    db_client = crud_client.get(db, id=client_id)
+    db_client = crud_client.get_by_id(db, id=client_id)
     if not db_client:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
