@@ -20,7 +20,14 @@ class ClientCreate(ClientBase):
 class ClientResponse(ClientBase):
     id: int
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True, "str_strip_whitespace": True}
+
+class ClientMinResponse(BaseModel):
+    id: int
+    name: str
+    national_id: Optional[str] = None
+
+    model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class ClientUpdate(BaseModel):
     national_id: Optional[str] = None
@@ -46,26 +53,7 @@ class DeviceCreate(DeviceBase):
 class DeviceResponse(DeviceBase):
     id: int
 
-    model_config = {"from_attributes": True}
-
-class DeviceUpdate(BaseModel):
-    client_id: Optional[int] = None
-    device_type: Optional[str] = None
-    brand: Optional[str] = None
-    model: Optional[str] = None
-    serial_number: Optional[str] = None
-
-# =========================================================================
-#---------------------------MINIMAL SCHEMAS FOR RELATIONS------------------
-# =========================================================================
-
-class ClientMinResponse(BaseModel):
-    id: int
-    name: str
-    national_id: Optional[str] = None
-
-    model_config = {"from_attributes": True}
-
+    model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class DeviceMinResponse(BaseModel):
     id: int
@@ -74,7 +62,14 @@ class DeviceMinResponse(BaseModel):
     model: str
     serial_number: Optional[str] = None
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True, "str_strip_whitespace": True}
+
+class DeviceUpdate(BaseModel):
+    client_id: Optional[int] = None
+    device_type: Optional[str] = None
+    brand: Optional[str] = None
+    model: Optional[str] = None
+    serial_number: Optional[str] = None
 
 # =========================================================================
 #---------------------------------TECHNICIAN-------------------------------
@@ -91,7 +86,7 @@ class TechnicianCreate(TechnicianBase):
 class TechnicianResponse(TechnicianBase):
     id: int
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class TechnicianUpdate(BaseModel):
     commission: Optional[int] = None
@@ -112,7 +107,7 @@ class RepairOrderBase(BaseModel):
     entry_date: date
     is_warranty: bool
     status: Optional[StatusOrder] = StatusOrder.PENDING
-    agreed_price: Optional[int] = None
+    agreed_price: Optional[float] = None
     exit_date: Optional[date] = None
 
     client_id: int
@@ -127,7 +122,7 @@ class RepairOrderResponse(RepairOrderBase):
     client: Optional[ClientMinResponse] = None
     device: Optional[DeviceMinResponse] = None
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class RepairOrderDetailResponse(RepairOrderResponse):
     client: ClientResponse
@@ -137,7 +132,7 @@ class RepairOrderUpdate(BaseModel):
     entry_date: Optional[date] = None
     is_warranty: Optional[bool] = None
     status: Optional[StatusOrder] = None
-    agreed_price: Optional[int] = None
+    agreed_price: Optional[float] = None
     exit_date: Optional[date] = None
 
     client_id: Optional[int] = None
@@ -150,8 +145,10 @@ class RepairOrderUpdate(BaseModel):
 
 class SparePartBase(BaseModel):
     name: str
+    component_type: str
+    brand: Optional[str] = "Generico"
     stock: Optional[int] = 0
-    price: Optional[int] = None
+    price: Optional[float] = None
 
 class SparePartCreate(SparePartBase):
     pass
@@ -159,12 +156,12 @@ class SparePartCreate(SparePartBase):
 class SparePartResponse(SparePartBase):
     id: int
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class SparePartUpdate(BaseModel):
     name: Optional[str] = None
     stock: Optional[int] = None
-    price: Optional[int] = None
+    price: Optional[float] = None
 
 # =========================================================================
 #---------------------------------ORDER SPARE PARTS------------------------
@@ -182,7 +179,7 @@ class OrderSparePartCreate(OrderSparePartBase):
 class OrderSparePartResponse(OrderSparePartBase):
     id: int
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class OrderSparePartUpdate(BaseModel):
     quantity: Optional[int] = None
@@ -195,7 +192,7 @@ class OrderSparePartUpdate(BaseModel):
 
 class ServiceTypeBase(BaseModel):
     name: str
-    price: Optional[int] = None
+    price: Optional[float] = None
 
 class ServiceTypeCreate(ServiceTypeBase):
     pass
@@ -203,11 +200,11 @@ class ServiceTypeCreate(ServiceTypeBase):
 class ServiceTypeResponse(ServiceTypeBase):
     id: int
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class ServiceTypeUpdate(BaseModel):
     name: Optional[str] = None
-    price: Optional[int] = None
+    price: Optional[float] = None
 
 # =========================================================================
 #---------------------------------ORDER SERVICES----------------------------
@@ -223,7 +220,7 @@ class OrderServiceCreate(OrderServiceBase):
 class OrderServiceResponse(OrderServiceBase):
     id: int
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class OrderServiceUpdate(BaseModel):
     repair_order_id: Optional[int] = None
@@ -245,7 +242,7 @@ class StorageCreate(StorageBase):
 class StorageResponse(StorageBase):
     id: int
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class StorageUpdate(BaseModel):
     entry_date: Optional[date] = None

@@ -48,9 +48,16 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     #---------------------------------------------------------------------------------------
 
-    def get(self, db: Session, id: int) -> Optional[ModelType]:
+    def get_by_id(self, db: Session, id: int) -> Optional[ModelType]:
         """Get a record by its ID"""
         return db.query(self.model).filter(self.model.id == id).first()
+
+    #---------------------------------------------------------------------------------------
+    
+    def get_by_other(self, db: Session, value: int, field: str) -> Optional[ModelType]:
+        """Get a record by other values"""
+        column = getattr(self.model, field)
+        return db.query(self.model).filter(column == value).first()
 
     #---------------------------------------------------------------------------------------
 
@@ -124,7 +131,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return db_obj
 
     def delete(self, db: Session, id: int) -> Optional[ModelType]:
-        db_delete = self.get(db, id)
+        db_delete = self.get_by_id(db, id)
 
         if not db_delete:
             return None
@@ -142,7 +149,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 class ClientCRUD(CRUDBase[Client, ClientCreate, ClientUpdate]):
     def delete(self, db: Session, id: int) :
         """Attempt to delete a client safely"""
-        db_client = self.get(db, id)
+        db_client = self.get_by_id(db, id)
         if not db_client:
             return None
         
@@ -158,7 +165,7 @@ class ClientCRUD(CRUDBase[Client, ClientCreate, ClientUpdate]):
 class DeviceCRUD(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
     def update_owner(self, db: Session, device_id: int, new_client_id: int) -> Device:
         """Assign id_client to a new client without changes to the history"""
-        db_device = self.get(db, id=device_id)
+        db_device = self.get_by_id(db, id=device_id)
 
         if not db_device:
             return None
@@ -172,7 +179,7 @@ class DeviceCRUD(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
 class RepairOrderCRUD(CRUDBase[RepairOrder, RepairOrderCreate, RepairOrderUpdate]):
     def delete(self, db: Session, id: int) -> Optional[RepairOrder]:
         """Attempt to delete a order repair safely"""
-        db_order_repair = self.get(db, id)
+        db_order_repair = self.get_by_id(db, id)
         if not db_order_repair:
             return None
             
@@ -188,7 +195,7 @@ class RepairOrderCRUD(CRUDBase[RepairOrder, RepairOrderCreate, RepairOrderUpdate
 class EmployeeCRUD(CRUDBase[EmployeeDirectory, EmployeeDirectoryCreate, EmployeeDirectoryUpdate]):
     def deactivate(self, db: Session, employee_id: int):
         """Deactivate an employee (is_active = False) instead of deleting it"""
-        db_employee = self.get(db, employee_id)
+        db_employee = self.get_by_id(db, employee_id)
         if db_employee:
             db_employee.is_active = False
             db.commit()
@@ -208,7 +215,7 @@ class TechnicianCRUD(CRUDBase[Technician, TechnicianCreate, TechnicianUpdate]):
 # --- STORAGE CRUD (DELETE) ---
 class StorageCRUD(CRUDBase[Storage, StorageCreate, StorageUpdate]):
     def remove_safely(self, db: Session, device_id: int):
-        db_storage = self.get(db, device_id)
+        db_storage = self.get_by_id(db, device_id)
         if not db_storage:
             return None
 

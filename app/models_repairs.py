@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, Date, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, Float, String, Boolean, Date, DateTime, ForeignKey
 from datetime import datetime, timezone
 from sqlalchemy.orm import relationship
 from app import Base
@@ -76,7 +76,7 @@ class RepairOrder(Base):
     is_warranty = Column(Boolean, default=False)
     status = Column(String(30), default="Pendiente", nullable=False)
     exit_date = Column(Date, nullable=True)
-    agreed_price = Column(Integer, nullable=True)
+    agreed_price = Column(Float, nullable=True)
 
     #ForeingKeys
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
@@ -98,10 +98,12 @@ class SparePart(Base):
     __tablename__ = "spare_parts"
 
     #Table Columns
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    name = Column(String(30), nullable=False)
-    stock = Column(Integer, default=0, nullable=False)
-    price = Column(Integer, nullable=True)
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    component_type = Column(String(50), nullable=True)
+    brand = Column(String(50), nullable=True) 
+    stock = Column(Integer, default=0)
+    price = Column(Float, nullable=True)
 
     #Relationships
     order_spare_parts = relationship("OrderSparePart", back_populates="spare_part")
@@ -135,7 +137,7 @@ class ServiceType(Base):
     #Table Columns
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String(100), nullable=False)
-    price = Column(Integer, nullable=True)
+    price = Column(Float, nullable=True)
 
     #Relationships
     order_services = relationship("OrderService", back_populates="service_type")

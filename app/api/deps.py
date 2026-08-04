@@ -29,7 +29,7 @@ def get_current_user(
     except (jwt.PyJWTError, ValidationError):
         raise credentials_exception
 
-    user = crud_user.get(db, id=int(user_id))
+    user = crud_user.get_by_id(db, id=int(user_id))
     if not user:
         raise credentials_exception
     if not user.is_active:
