@@ -2,9 +2,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import cast, String
-from app.database import get_db
-from app.crud import crud_client
-from app import Client, ClientCreate, ClientResponse, ClientUpdate, crud_client
+from app import Client, ClientCreate, ClientResponse, ClientUpdate, crud_client, get_db
 from app.api.deps import require_roles
 from app.core import LEVEL_BASIC, LEVEL_MEDIUM, LEVEL_ADVANCE
 
@@ -13,6 +11,25 @@ router = APIRouter(prefix="/clients", tags=["Clients"])
 @router.post("/", response_model=ClientResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_roles(LEVEL_MEDIUM))])
 def create_client(client_in: ClientCreate, db: Session = Depends(get_db)):
     """Create a new client in the database."""
+    errors = []
+    if client_in.national_id:
+        if crud_client.get_by_other(db, value=client_in.national_id, field="national_id"):
+            errors.append("La Cédula/RIF ya está registrada")
+    
+    if client_in.phone:
+        if crud_client.get_by_other(db, value=client_in.phone, field="phone"):
+            errors.append("El número de teléfono ya está registrado")
+
+    if client_in.mail:
+        if crud_client.get_by_other(db, value=client_in.mail, field="mail"):
+            errors.append("El correo electrónico ya está registrado")
+
+    if errors:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, 
+            detail=errors
+        )
+        
     return crud_client.create(db, obj_in=client_in)
 
 @router.get("/", response_model=List[ClientResponse], dependencies=[Depends(require_roles(LEVEL_BASIC))])
@@ -41,6 +58,30 @@ def update_client(client_id: int, client_in: ClientUpdate, db: Session = Depends
             status_code=status.HTTP_404_NOT_FOUND, 
             detail="Cliente no encontrado"
         )
+
+    errors = []
+    
+    if client_in.national_id:
+        val_nat = crud_client.get_by_other(db, value=client_in.national_id, field="national_id")
+        if val_nat and val_nat.id != client_id:
+            errors.append("La Cédula/RIF ya está registrada")
+
+    if client_in.phone:
+        val_phone = crud_client.get_by_other(db, value=client_in.phone, field="phone")
+        if val_phone and val_phone.id != client_id:
+            errors.append("El número de teléfono ya está registrado")
+
+    if client_in.mail:
+        val_mail = crud_client.get_by_other(db, value=client_in.mail, field="mail")
+        if val_mail and val_mail.id != client_id:
+            errors.append("El correo electrónico ya está registrado")
+
+    if errors:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, 
+            detail=errors
+        )
+        
     return crud_client.update(db, db_obj=db_client, obj_in=client_in)
 
 @router.delete("/{client_id}", dependencies=[Depends(require_roles(LEVEL_ADVANCE))])

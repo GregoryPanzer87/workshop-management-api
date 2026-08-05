@@ -2,6 +2,7 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional
 from datetime import date, datetime
 from enum import Enum
+from app.config import EmptyEmailToNone, EmptyStrToNone, EmptyIntToNone, EmptyBoolToNone, EmptyDateToNone
 
 # =========================================================================
 #---------------------------------EMPLOYEE DIRECTORY-----------------------
@@ -15,10 +16,10 @@ class EmployeeDirectoryBase(BaseModel):
     occupation: str
     employee_code: str
     entry_date: date
-    is_active: Optional[bool] = True
-    tax_id_doc: Optional[str] = None
-    national_id_doc: Optional[str] = None
-    profile_photo: Optional[str] = None
+    is_active: EmptyBoolToNone = None
+    tax_id_doc: EmptyStrToNone = None
+    national_id_doc: EmptyStrToNone = None
+    profile_photo: EmptyStrToNone = None
 
 class EmployeeDirectoryCreate(EmployeeDirectoryBase):
     pass
@@ -26,20 +27,20 @@ class EmployeeDirectoryCreate(EmployeeDirectoryBase):
 class EmployeeDirectoryResponse(EmployeeDirectoryBase):
     id: int
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class EmployeeDirectoryUpdate(BaseModel):
-    full_name: Optional[str] = None
-    national_id: Optional[str] = None
-    tax_id: Optional[str] = None
-    short_address: Optional[str] = None
-    occupation: Optional[str] = None
-    employee_code: Optional[str] = None
-    entry_date: Optional[date] = None
-    is_active: Optional[bool] = None
-    tax_id_doc: Optional[str] = None
-    national_id_doc: Optional[str] = None
-    profile_photo: Optional[str] = None
+    full_name: EmptyStrToNone = None
+    national_id: EmptyStrToNone = None
+    tax_id: EmptyStrToNone = None
+    short_address: EmptyStrToNone = None
+    occupation: EmptyStrToNone = None
+    employee_code: EmptyStrToNone = None
+    entry_date: EmptyDateToNone = None
+    is_active: EmptyBoolToNone = None
+    tax_id_doc: EmptyStrToNone = None
+    national_id_doc: EmptyStrToNone = None
+    profile_photo: EmptyStrToNone = None
 
 # =========================================================================
 #-----------------------------------USERS----------------------------------
@@ -55,11 +56,11 @@ class UserRole(str, Enum):
 class UserBase(BaseModel):
     username: str
     is_active: bool = True
-    mail: Optional[EmailStr] = None
+    mail: EmptyEmailToNone = None
     role: Optional[UserRole] = UserRole.CLIENT
     
-    employee_id: Optional[int] = None
-    client_id: Optional[int] = None
+    employee_id: EmptyIntToNone = None
+    client_id: EmptyIntToNone = None
 
 class UserCreate(UserBase):
     password: str
@@ -67,17 +68,17 @@ class UserCreate(UserBase):
 class UserResponse(UserBase):
     id: int
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class UserUpdate(BaseModel):
-    username: Optional[str] = None
-    is_active: Optional[bool] = None
-    mail: Optional[EmailStr] = None
+    username: EmptyStrToNone = None
+    is_active: EmptyBoolToNone = None
+    mail: EmptyEmailToNone = None
     role: Optional[UserRole] = None
-    password: Optional[str] = None
+    password: EmptyStrToNone = None
 
-    employee_id: Optional[int] = None
-    client_id: Optional[int] = None
+    employee_id: EmptyIntToNone = None
+    client_id: EmptyIntToNone = None
     
 # =========================================================================
 #---------------------------------EXPENSE----------------------------------
@@ -95,13 +96,13 @@ class ExpenseCreate(ExpenseBase):
 class ExpenseResponse(ExpenseBase):
     id: int
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class ExpenseUpdate(BaseModel):
-    description: Optional[str] = None
-    amount: Optional[int] = None
-    expense_date: Optional[date] = None
-    category: Optional[str] = None
+    description: EmptyStrToNone = None
+    amount: EmptyIntToNone = None
+    expense_date: EmptyDateToNone = None
+    category: EmptyStrToNone = None
 
 # =========================================================================
 #---------------------------------ATTENDANCE-------------------------------
@@ -125,13 +126,13 @@ class AttendanceCreate(AttendanceBase):
 class AttendanceResponse(AttendanceBase):
     id: int
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class AttendanceUpdate(BaseModel):
-    date_now: Optional[date] = None
+    date_now: EmptyDateToNone = None
     status: Optional[StatusAttendance] = None
 
-    employee_id: Optional[int] = None
+    employee_id: EmptyIntToNone = None
 
 # =========================================================================
 #---------------------------------AUDITLOG---------------------------------
@@ -141,7 +142,7 @@ class AuditLogBase(BaseModel):
     action: str
     entity: str
     entity_id: int
-    details: Optional[str] = None
+    details: EmptyStrToNone = None
 
     user_id: int
 
@@ -152,7 +153,7 @@ class AuditLogResponse(AuditLogBase):
     id: int
     created_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class AuditLogUpdate(BaseModel):
     pass

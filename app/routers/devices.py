@@ -14,6 +14,13 @@ router = APIRouter(prefix="/devices", tags=["Devices"])
 @router.post("/", response_model=DeviceResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_roles(LEVEL_MEDIUM))])
 def create_device(device_in: DeviceCreate, db: Session = Depends(get_db)):
     """Creates a new device in the database and links it to a client."""
+    if device_in.serial_number:
+        if crud_device.get_by_other(db, value=device_in.serial_number, field="serial_number"):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Ya existe un equipo registrado con este Serial"
+            )
+        
     return crud_device.create(db, obj_in=device_in)
 
 @router.get("/", response_model=List[DeviceResponse], dependencies=[Depends(require_roles(LEVEL_BASIC))])
@@ -64,6 +71,15 @@ def update_device(device_id: int, device_in: DeviceUpdate, db: Session = Depends
             status_code=status.HTTP_404_NOT_FOUND, 
             detail="Equipo no encontrado"
         )
+
+    if device_in.serial_number:
+        val_sn = crud_device.get_by_other(db, value=device_in.serial_number, field="serial_number")
+        if val_sn and val_sn.id != device_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="El número de serie ya pertenece a otro equipo registrado"
+            )
+        
     return crud_device.update(db, db_obj=db_device, obj_in=device_in)
 
 @router.patch("/{device_id}/transfer/{mew_client_id}", dependencies=[Depends(require_roles(LEVEL_MEDIUM))])

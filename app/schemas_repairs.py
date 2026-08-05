@@ -1,18 +1,19 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from typing import Optional
 from datetime import date
 from enum import Enum
+from app.config import EmptyEmailToNone, EmptyStrToNone, EmptyFloatToNone, EmptyIntToNone
 
 # =========================================================================
 #---------------------------------CLIENTS----------------------------------
 # =========================================================================
 
 class ClientBase(BaseModel):
-    national_id: Optional[str] = None
+    national_id: EmptyStrToNone = None
     name: str
-    phone: Optional[str] = None
-    mail: Optional[EmailStr] = None
-    short_address: Optional[str] = None
+    phone: EmptyStrToNone = None
+    mail: EmptyEmailToNone = None
+    short_address: EmptyStrToNone = None
 
 class ClientCreate(ClientBase):
     pass
@@ -25,16 +26,16 @@ class ClientResponse(ClientBase):
 class ClientMinResponse(BaseModel):
     id: int
     name: str
-    national_id: Optional[str] = None
+    national_id: EmptyStrToNone = None
 
     model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class ClientUpdate(BaseModel):
-    national_id: Optional[str] = None
-    name: Optional[str] = None
-    phone: Optional[str] = None
-    mail: Optional[EmailStr] = None
-    short_address: Optional[str] = None
+    national_id: EmptyStrToNone = None
+    name: EmptyStrToNone = None
+    phone: EmptyStrToNone = None
+    mail: EmptyEmailToNone = None
+    short_address: EmptyStrToNone = None
 
 # =========================================================================
 #---------------------------------DEVICES---------------------------------
@@ -60,23 +61,23 @@ class DeviceMinResponse(BaseModel):
     device_type: str
     brand: str
     model: str
-    serial_number: Optional[str] = None
+    serial_number: EmptyStrToNone = None
 
     model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class DeviceUpdate(BaseModel):
-    client_id: Optional[int] = None
-    device_type: Optional[str] = None
-    brand: Optional[str] = None
-    model: Optional[str] = None
-    serial_number: Optional[str] = None
+    client_id: EmptyIntToNone = None
+    device_type: EmptyStrToNone = None
+    brand: EmptyStrToNone = None
+    model: EmptyStrToNone = None
+    serial_number: EmptyStrToNone = None
 
 # =========================================================================
 #---------------------------------TECHNICIAN-------------------------------
 # =========================================================================
 
 class TechnicianBase(BaseModel):
-    commission: Optional[int] = None
+    commission: EmptyIntToNone = None
 
     employee_id: int
 
@@ -89,9 +90,9 @@ class TechnicianResponse(TechnicianBase):
     model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class TechnicianUpdate(BaseModel):
-    commission: Optional[int] = None
+    commission: EmptyIntToNone = None
 
-    employee_id: Optional[int] = None
+    employee_id: EmptyIntToNone = None
 
 # =========================================================================
 #---------------------------------REPAIRS ORDERS---------------------------
@@ -107,7 +108,7 @@ class RepairOrderBase(BaseModel):
     entry_date: date
     is_warranty: bool
     status: Optional[StatusOrder] = StatusOrder.PENDING
-    agreed_price: Optional[float] = None
+    agreed_price: EmptyFloatToNone = None
     exit_date: Optional[date] = None
 
     client_id: int
@@ -132,12 +133,12 @@ class RepairOrderUpdate(BaseModel):
     entry_date: Optional[date] = None
     is_warranty: Optional[bool] = None
     status: Optional[StatusOrder] = None
-    agreed_price: Optional[float] = None
+    agreed_price: EmptyFloatToNone = None
     exit_date: Optional[date] = None
 
-    client_id: Optional[int] = None
-    device_id: Optional[int] = None
-    technician_id: Optional[int] = None
+    client_id: EmptyIntToNone = None
+    device_id: EmptyIntToNone = None
+    technician_id: EmptyIntToNone = None
 
 # =========================================================================
 #---------------------------------SPARE PARTS------------------------------
@@ -146,9 +147,9 @@ class RepairOrderUpdate(BaseModel):
 class SparePartBase(BaseModel):
     name: str
     component_type: str
-    brand: Optional[str] = "Generico"
-    stock: Optional[int] = 0
-    price: Optional[float] = None
+    brand: EmptyStrToNone = "Generico"
+    stock: EmptyIntToNone = 0
+    price: EmptyFloatToNone = None
 
 class SparePartCreate(SparePartBase):
     pass
@@ -159,9 +160,9 @@ class SparePartResponse(SparePartBase):
     model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class SparePartUpdate(BaseModel):
-    name: Optional[str] = None
-    stock: Optional[int] = None
-    price: Optional[float] = None
+    name: EmptyStrToNone = None
+    stock: EmptyIntToNone = None
+    price: EmptyFloatToNone = None
 
 # =========================================================================
 #---------------------------------ORDER SPARE PARTS------------------------
@@ -182,9 +183,9 @@ class OrderSparePartResponse(OrderSparePartBase):
     model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class OrderSparePartUpdate(BaseModel):
-    quantity: Optional[int] = None
-    repair_order_id: Optional[int] = None
-    spare_part_id: Optional[int] = None
+    quantity: EmptyIntToNone = None
+    repair_order_id: EmptyIntToNone = None
+    spare_part_id: EmptyIntToNone = None
 
 # =========================================================================
 #---------------------------------SERVICE TYPES----------------------------
@@ -192,7 +193,7 @@ class OrderSparePartUpdate(BaseModel):
 
 class ServiceTypeBase(BaseModel):
     name: str
-    price: Optional[float] = None
+    price: EmptyFloatToNone = None
 
 class ServiceTypeCreate(ServiceTypeBase):
     pass
@@ -203,8 +204,8 @@ class ServiceTypeResponse(ServiceTypeBase):
     model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class ServiceTypeUpdate(BaseModel):
-    name: Optional[str] = None
-    price: Optional[float] = None
+    name: EmptyStrToNone = None
+    price: EmptyFloatToNone = None
 
 # =========================================================================
 #---------------------------------ORDER SERVICES----------------------------
@@ -223,8 +224,8 @@ class OrderServiceResponse(OrderServiceBase):
     model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class OrderServiceUpdate(BaseModel):
-    repair_order_id: Optional[int] = None
-    service_types_id: Optional[int] = None
+    repair_order_id: EmptyIntToNone = None
+    service_types_id: EmptyIntToNone = None
 
 # =========================================================================
 #----------------------------------STORAGE---------------------------------
@@ -246,6 +247,6 @@ class StorageResponse(StorageBase):
 
 class StorageUpdate(BaseModel):
     entry_date: Optional[date] = None
-    column: Optional[str] = None
+    column: EmptyStrToNone = None
 
-    device_id: Optional[int] = None
+    device_id: EmptyIntToNone = None

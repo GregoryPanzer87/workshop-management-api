@@ -12,9 +12,9 @@ class Client(Base):
 
     #Table Columns
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    national_id = Column(String(20), nullable=False)
+    national_id = Column(String(20), unique=True, nullable=False)
     name = Column(String(50), nullable=True)
-    phone = Column(String(20), nullable=True)
+    phone = Column(String(20), unique=True, nullable=True)
     mail = Column(String(100), unique=True, nullable=True)
     short_address = Column(String(50), nullable=True)
 
@@ -35,7 +35,7 @@ class Device(Base):
     device_type = Column(String(20), nullable=False)
     brand = Column(String(30), nullable=False)
     model = Column(String(30), nullable=False)
-    serial_number = Column(String(30), nullable=False)
+    serial_number = Column(String(30), unique=True, nullable=False)
 
     #ForeingKeys
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
