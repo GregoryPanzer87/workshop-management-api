@@ -68,7 +68,6 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     #---------------------------------------------------------------------------------------
     
     def get_other_id(self, db: Session, id: int, field: str, skip: int = 0, limit: int = 20) -> List[ModelType]:
-    # Si RepairOrder tiene directamente client_id:
         column = getattr(self.model, field)
         return (
             db.query(self.model)
@@ -102,18 +101,14 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         if not query or not query.strip():
             return self.get_multi(db, limit=limit)
 
-        # 2. Limpiamos el texto ingresado
         clean_query = query.strip()
         search_pattern = f"%{clean_query}%"
         
-        # 3. Construimos los filtros solo con los campos válidos
         filters = [field.ilike(search_pattern) for field in search_fields if field is not None]
 
-        # 4. Si por alguna razón no hay filtros válidos, no ejecutamos or_()
         if not filters:
             return self.get_multi(db, limit=limit)
 
-        # 5. Ejecutamos la consulta con or_
         return db.query(self.model).filter(or_(*filters)).limit(limit).all()
 
     #---------------------------------------------------------------------------------------

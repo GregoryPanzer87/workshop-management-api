@@ -4,7 +4,7 @@ from .database import (
 )
 
 from .models_repairs import (
-    Client, Device, Technician, RepairOrder, SparePart, 
+    Client, DeviceType, DeviceBrand, Device, Technician, RepairOrder, SparePart, 
     OrderSparePart, ServiceType, OrderService, Storage
 )
 
@@ -15,6 +15,10 @@ from .models_others import (
 from .schemas_repairs import (
     # Clients
     ClientBase, ClientCreate, ClientResponse, ClientUpdate, ClientMinResponse,
+    # Devices Types
+    DeviceTypeBase, DeviceTypeCreate, DeviceTypeResponse, DeviceTypeUpdate,
+    # Devices Brands
+    DeviceBrandBase, DeviceBrandCreate, DeviceBrandResponse, DeviceBrandUpdate,
     # Devices
     DeviceBase, DeviceCreate, DeviceResponse, DeviceUpdate, DeviceMinResponse,
     # Repair Orders

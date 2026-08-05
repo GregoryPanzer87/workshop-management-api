@@ -24,24 +24,46 @@ class Client(Base):
     user = relationship("User", back_populates="client")
 
 # =========================================================================
-# TABLE DEVICES
+# TABLES DEVICES
 # =========================================================================
 
+class DeviceType(Base):
+    __tablename__ = "devices_types"
+
+    #Table Columns
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    name = Column(String(50), nullable=False)
+    
+    #Relationships
+    devices = relationship("Device", back_populates="device_type")
+
+class DeviceBrand(Base):
+    __tablename__ = "devices_brands"
+
+    #Table Columns
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    name = Column(String(50), nullable=False)
+
+    #Relationships
+    devices = relationship("Device", back_populates="device_brand")
+    
 class Device(Base):
     __tablename__ = "devices"
 
     #Table Columns
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    device_type = Column(String(20), nullable=False)
-    brand = Column(String(30), nullable=False)
     model = Column(String(30), nullable=False)
     serial_number = Column(String(30), unique=True, nullable=False)
 
     #ForeingKeys
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
+    device_type_id = Column(Integer, ForeignKey("devices_types.id"), nullable=False)
+    device_brand_id = Column(Integer, ForeignKey("devices_brands.id"), nullable=False)
 
     #Relationships
     client = relationship("Client", back_populates="devices")
+    device_type = relationship("DeviceType", back_populates="devices")
+    device_brand = relationship("DeviceBrand", back_populates="devices")
     repairs_orders = relationship("RepairOrder", back_populates="device")
     storage = relationship("Storage", back_populates="device")
 

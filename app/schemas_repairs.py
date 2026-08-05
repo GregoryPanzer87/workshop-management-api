@@ -38,6 +38,43 @@ class ClientUpdate(BaseModel):
     short_address: EmptyStrToNone = None
 
 # =========================================================================
+#------------------------------DEVICES TYPES-------------------------------
+# =========================================================================
+
+class DeviceTypeBase(BaseModel):
+    name: str
+
+class DeviceTypeCreate(DeviceTypeBase):
+    pass
+
+class DeviceTypeResponse(DeviceTypeBase):
+    id: int
+
+    model_config = {"from_attributes": True, "str_strip_whitespace": True}
+
+class DeviceTypeUpdate(BaseModel):
+    name: EmptyStrToNone = None
+
+
+# =========================================================================
+#------------------------------DEVICES BRAND-------------------------------
+# =========================================================================
+
+class DeviceBrandBase(BaseModel):
+    name: str
+
+class DeviceBrandCreate(DeviceBrandBase):
+    pass
+
+class DeviceBrandResponse(DeviceBrandBase):
+    id: int
+
+    model_config = {"from_attributes": True, "str_strip_whitespace": True}
+
+class DeviceBrandUpdate(BaseModel):
+    name: EmptyStrToNone = None
+
+# =========================================================================
 #---------------------------------DEVICES---------------------------------
 # =========================================================================
 
