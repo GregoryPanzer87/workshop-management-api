@@ -4,7 +4,7 @@ import string
 from sqlalchemy.orm import Session
 from app import crud_device_type
 
-def generate_device_type_prefix(type_name: str, field: str, db: Session):
+def generate_device_type_prefix(type_name: str, db: Session):
     """Generate an unique prefix by devices types"""
     words = type_name.replace("-", " ").split()
 
@@ -20,16 +20,16 @@ def generate_device_type_prefix(type_name: str, field: str, db: Session):
 
     while True:
         existing_device = crud_device_type.get_by_other(
-            db, value=prefix, field=field
+            db, value=prefix, field="prefix"
         )
 
         if existing_device is None:
             break
 
         if len(words) == 2 and counter < len(words[0]):
-            prefix = f"{words[0][: counter + 1]}{words[1][:2]}".upper()
+            prefix = f"{words[0][: counter + 1]}{words[1][: counter - (counter // 2)]}".upper()
         else:
-            prefix = f"{base_prefix}{counter}"
+            prefix = f"{words[0][: counter]}"
 
         counter += 1
 

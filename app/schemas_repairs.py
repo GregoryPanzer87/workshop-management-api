@@ -43,6 +43,7 @@ class ClientUpdate(BaseModel):
 
 class DeviceTypeBase(BaseModel):
     name: str
+    prefix: str
 
 class DeviceTypeCreate(DeviceTypeBase):
     pass
@@ -54,6 +55,7 @@ class DeviceTypeResponse(DeviceTypeBase):
 
 class DeviceTypeUpdate(BaseModel):
     name: EmptyStrToNone = None
+    prefix: EmptyStrToNone = None
 
 
 # =========================================================================
