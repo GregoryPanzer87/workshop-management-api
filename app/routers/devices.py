@@ -5,7 +5,8 @@ from sqlalchemy import cast, String
 from app.database import get_db
 from app.crud import crud_device
 from app.models_repairs import Device
-from app import Device, DeviceCreate, DeviceResponse, DeviceUpdate, crud_device
+from app import Device, DeviceCreate, DeviceResponse, DeviceUpdate, crud_device_type, crud_device
+from app.utils import generate_custom_serial
 from app.api.deps import require_roles
 from app.core import LEVEL_BASIC, LEVEL_MEDIUM
 
@@ -14,7 +15,24 @@ router = APIRouter(prefix="/devices", tags=["Devices"])
 @router.post("/", response_model=DeviceResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_roles(LEVEL_MEDIUM))])
 def create_device(device_in: DeviceCreate, db: Session = Depends(get_db)):
     """Creates a new device in the database and links it to a client."""
-    if device_in.serial_number:
+    if device_in.serial_number is None:
+        db_device_type = crud_device_type.get_by_id(db, device_in.device_type_id)
+
+        if not db_device_type:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="El tipo de dispositivo especificado no existe",
+            )
+
+        while True:
+            generated_serial = generate_custom_serial(db_device_type.prefix)
+            if not crud_device.get_by_other(
+                db, value=generated_serial, field="serial_number"
+            ):
+                device_in.serial_number = generated_serial
+                break
+
+    else:
         if crud_device.get_by_other(db, value=device_in.serial_number, field="serial_number"):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,

@@ -1,7 +1,7 @@
 import os
 import json
 from dotenv import load_dotenv
-from pydantic import BaseModel, EmailStr, BeforeValidator
+from pydantic import EmailStr, BeforeValidator
 from typing import Annotated, Optional
 
 load_dotenv()

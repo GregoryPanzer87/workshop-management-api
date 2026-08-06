@@ -5,6 +5,10 @@ from pydantic import BaseModel
 from app import (
     # Client
     Client, ClientCreate, ClientUpdate,
+    # Device Type
+    DeviceType, DeviceTypeCreate, DeviceTypeUpdate,
+    # Device Brand
+    DeviceBrand, DeviceBrandCreate, DeviceBrandUpdate,
     # Device
     Device, DeviceCreate, DeviceUpdate,
     # Employee
@@ -54,7 +58,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     #---------------------------------------------------------------------------------------
     
-    def get_by_other(self, db: Session, value: int, field: str) -> Optional[ModelType]:
+    def get_by_other(self, db: Session, value: str, field: str) -> Optional[ModelType]:
         """Get a record by other values"""
         column = getattr(self.model, field)
         return db.query(self.model).filter(column == value).first()
@@ -248,6 +252,8 @@ class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
 # =========================================================================
 
 crud_client = ClientCRUD(Client)
+crud_device_type = CRUDBase[DeviceType, DeviceTypeCreate, DeviceTypeUpdate](DeviceType)
+crud_device_brand = CRUDBase[DeviceBrand, DeviceBrandCreate, DeviceBrandUpdate](DeviceBrand)
 crud_device = DeviceCRUD(Device)
 crud_employee = EmployeeCRUD(EmployeeDirectory)
 crud_technician = TechnicianCRUD(Technician)

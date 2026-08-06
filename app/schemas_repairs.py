@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import date
 from enum import Enum
-from app.config import EmptyEmailToNone, EmptyStrToNone, EmptyFloatToNone, EmptyIntToNone
+from app.config import EmptyEmailToNone, EmptyStrToNone, EmptyFloatToNone, EmptyIntToNone, EmptyBoolToNone, EmptyDateToNone
 
 # =========================================================================
 #---------------------------------CLIENTS----------------------------------
@@ -80,10 +80,12 @@ class DeviceBrandUpdate(BaseModel):
 
 class DeviceBase(BaseModel):
     client_id: int
-    device_type: str
-    brand: str
     model: str
-    serial_number: str
+    serial_number: EmptyStrToNone = None
+    description: str
+
+    device_type_id: int
+    device_brand_id: int
 
 class DeviceCreate(DeviceBase):
     pass
@@ -95,19 +97,21 @@ class DeviceResponse(DeviceBase):
 
 class DeviceMinResponse(BaseModel):
     id: int
-    device_type: str
-    brand: str
     model: str
+    description: EmptyStrToNone = None
     serial_number: EmptyStrToNone = None
+    device_type_id: DeviceTypeResponse
+    device_brand_id: DeviceBrandResponse
 
     model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class DeviceUpdate(BaseModel):
     client_id: EmptyIntToNone = None
-    device_type: EmptyStrToNone = None
-    brand: EmptyStrToNone = None
     model: EmptyStrToNone = None
     serial_number: EmptyStrToNone = None
+    description: EmptyStrToNone = None
+    device_type_id: EmptyIntToNone = None
+    device_brand_id: EmptyIntToNone = None
 
 # =========================================================================
 #---------------------------------TECHNICIAN-------------------------------
@@ -146,7 +150,7 @@ class RepairOrderBase(BaseModel):
     is_warranty: bool
     status: Optional[StatusOrder] = StatusOrder.PENDING
     agreed_price: EmptyFloatToNone = None
-    exit_date: Optional[date] = None
+    exit_date: EmptyDateToNone = None
 
     client_id: int
     device_id: int
@@ -167,11 +171,12 @@ class RepairOrderDetailResponse(RepairOrderResponse):
     device: DeviceResponse
 
 class RepairOrderUpdate(BaseModel):
-    entry_date: Optional[date] = None
-    is_warranty: Optional[bool] = None
+    entry_date: EmptyDateToNone = None
+    is_warranty: EmptyBoolToNone = None
     status: Optional[StatusOrder] = None
     agreed_price: EmptyFloatToNone = None
-    exit_date: Optional[date] = None
+    exit_date: EmptyDateToNone = None
+    legacy_order_id: EmptyIntToNone = None
 
     client_id: EmptyIntToNone = None
     device_id: EmptyIntToNone = None
@@ -283,7 +288,7 @@ class StorageResponse(StorageBase):
     model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class StorageUpdate(BaseModel):
-    entry_date: Optional[date] = None
+    entry_date: EmptyDateToNone = None
     column: EmptyStrToNone = None
 
     device_id: EmptyIntToNone = None

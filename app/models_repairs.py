@@ -32,7 +32,8 @@ class DeviceType(Base):
 
     #Table Columns
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    name = Column(String(50), nullable=False)
+    name = Column(String(50), unique=True, nullable=False)
+    prefix = Column(String(5), unique=True, nullable=True)
     
     #Relationships
     devices = relationship("Device", back_populates="device_type")
@@ -53,7 +54,8 @@ class Device(Base):
     #Table Columns
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     model = Column(String(30), nullable=False)
-    serial_number = Column(String(30), unique=True, nullable=False)
+    serial_number = Column(String(30), unique=True, nullable=True)
+    description = Column(String(200), nullable=False)
 
     #ForeingKeys
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
@@ -95,10 +97,11 @@ class RepairOrder(Base):
     #Table Columns
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     entry_date = Column(Date, nullable=False)
-    is_warranty = Column(Boolean, default=False)
+    is_warranty = Column(Boolean, default=False, nullable=False)
     status = Column(String(30), default="Pendiente", nullable=False)
     exit_date = Column(Date, nullable=True)
     agreed_price = Column(Float, nullable=True)
+    legacy_order_id = Column(Integer, nullable= True)
 
     #ForeingKeys
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
