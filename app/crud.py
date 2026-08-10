@@ -1,6 +1,6 @@
 from typing import Generic, TypeVar, Type, Optional, List, Any
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import select, or_
 from pydantic import BaseModel
 from app import (
     # Client
@@ -54,32 +54,29 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     def get_by_id(self, db: Session, id: int) -> Optional[ModelType]:
         """Get a record by its ID"""
-        return db.query(self.model).filter(self.model.id == id).first()
+        return db.get(self.model, id)
 
     #---------------------------------------------------------------------------------------
     
     def get_by_other(self, db: Session, value: str, field: str) -> Optional[ModelType]:
         """Get a record by other values"""
         column = getattr(self.model, field)
-        return db.query(self.model).filter(column == value).first()
+        stmt = select(self.model).where(column == value)
+        return db.scalar(stmt)
 
     #---------------------------------------------------------------------------------------
 
     def get_multi(self, db: Session, skip: int = 0, limit: int = 100) -> List[ModelType]:
         """Retrieves a list of paginated records"""
-        return db.query(self.model).offset(skip).limit(limit).all()
+        stmt = select(self.model).offset(skip).limit(limit)
+        return list(db.scalars(stmt).all())
 
     #---------------------------------------------------------------------------------------
     
     def get_other_id(self, db: Session, id: int, field: str, skip: int = 0, limit: int = 20) -> List[ModelType]:
         column = getattr(self.model, field)
-        return (
-            db.query(self.model)
-            .filter(column == id)
-            .offset(skip)
-            .limit(limit)
-            .all()
-        )
+        stmt = select(self.model).where(column == id).offset(skip).limit(limit)
+        return list(db.scalars(stmt).all())
 
     #---------------------------------------------------------------------------------------
 
@@ -93,15 +90,51 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return db_obj
 
     #---------------------------------------------------------------------------------------
+    
+    def search_where(
+        self,
+        db: Session,
+        value_1: str,
+        value_2: str,
+        field_1: str,
+        field_2: str
+    ) -> Optional[ModelType]:
+        column_1 = getattr(self.model, field_1)
+        column_2 = getattr(self.model, field_2)
+        stmt = select(self.model).where(
+            column_1 == value_1,
+            column_2 == value_2
+        )
+        return db.scalar(stmt)
 
-    def search(
+    #---------------------------------------------------------------------------------------
+
+    def search_where_by_IDs(
+            self,
+            db: Session,
+            id_1: int,
+            id_2: int,
+            field_1: str,
+            field_2: str
+    ) -> Optional[ModelType]:
+        column_1 = getattr(self.model, field_1)
+        column_2 = getattr(self.model, field_2)
+        stmt = select(self.model).where(
+            column_1 == id_1,
+            column_2 == id_2
+        )
+        return db.scalar(stmt)
+
+    #---------------------------------------------------------------------------------------
+
+    def search_ilike(
         self, 
         db: Session, 
         query: str, 
         search_fields: List[Any], 
         limit: int = 20
     ) -> List[ModelType]:
-        """Busca clientes por nombre, identificación o teléfono."""
+        """Search in tables by datebase"""
         if not query or not query.strip():
             return self.get_multi(db, limit=limit)
 
@@ -113,7 +146,8 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         if not filters:
             return self.get_multi(db, limit=limit)
 
-        return db.query(self.model).filter(or_(*filters)).limit(limit).all()
+        stmt = select(self.model).where(or_(*filters)).limit(limit)
+        return list(db.scalars(stmt).all())
 
     #---------------------------------------------------------------------------------------
     
@@ -207,9 +241,12 @@ class EmployeeCRUD(CRUDBase[EmployeeDirectory, EmployeeDirectoryCreate, Employee
 class TechnicianCRUD(CRUDBase[Technician, TechnicianCreate, TechnicianUpdate]):
     def get_by_code(self, db: Session, employee_code: str):
         """Search a technician using the employee code"""
-        return db.query(Technician).\
-            join(EmployeeDirectory).\
-            filter(EmployeeDirectory.employee_code == employee_code).first()
+        stmt =  (
+            select(Technician)
+            .join(EmployeeDirectory)
+            .where(EmployeeDirectory.employee_code == employee_code)
+        )
+        return db.scalar(stmt)
 
 # --- STORAGE CRUD (DELETE) ---
 class StorageCRUD(CRUDBase[Storage, StorageCreate, StorageUpdate]):
@@ -245,7 +282,8 @@ class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
 
     def get_by_user(self, db: Session, user: str) -> Optional[User]:
         """Get a record by its username"""
-        return db.query(User).filter(User.username == user).first()
+        stmt = select(User).where(User.username == user)
+        return db.scalar(stmt)
 
 # =========================================================================
 # 3. READY-TO-USE INSTANCES FOR MAIN
