@@ -50,7 +50,7 @@ def read_devices(
 ):
     """Retrieves a paginated list of customers or performs a real-time search by sending 'q'."""
     if q and q.strip():
-        return crud_device.search(
+        return crud_device.search_ilike(
             db=db, 
             query=q, 
             search_fields=[cast(Device.client_id, String), Device.device_type, Device.brand, Device.model, Device.serial_number], 

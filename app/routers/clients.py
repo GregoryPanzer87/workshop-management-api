@@ -41,7 +41,7 @@ def read_clients(
 ):
     """Retrieves a paginated list of customers or performs a real-time search by sending 'q'."""
     if q and q.strip():
-        return crud_client.search(
+        return crud_client.search_ilike(
             db=db, 
             query=q, 
             search_fields=[Client.name, cast(Client.national_id, String), Client.phone, Client.short_address], 

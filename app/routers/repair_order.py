@@ -23,7 +23,7 @@ def read_repairs_orders(
 ):
     """Retrieves a paginated list of repairs orders or performs a real-time search by sending 'q'."""
     if q and q.strip():
-        return crud_repair_order.search(
+        return crud_repair_order.search_ilike(
             db=db, 
             query=q, 
             search_fields=[cast(RepairOrder.id, String), cast(RepairOrder.entry_date, String), 

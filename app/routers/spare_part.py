@@ -11,7 +11,9 @@ router = APIRouter(prefix="/spare_parts", tags=["Spare Parts"])
 @router.post("/", response_model=SparePartResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_roles(LEVEL_BASIC))])
 def create_spare_part(spare_part_in: SparePartCreate, db: Session = Depends(get_db)):
     """Create a new spare part in the database."""
-    validation = crud_spare_part.get_by_other(db, value=spare_part_in.name, field="name")
+    validation = crud_spare_part.get_by_other(
+        db, value=spare_part_in.name, field="name"
+    )
     if validation:
         raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT, 
@@ -28,7 +30,7 @@ def read_spare_parts(
 ):
     """Retrieves a paginated list of spare parts or performs a real-time search by sending 'q'."""
     if q and q.strip():
-        return crud_spare_part.search(
+        return crud_spare_part.search_ilike(
             db=db, 
             query=q, 
             search_fields=[cast(SparePart.id, String), SparePart.name, SparePart.brand, SparePart.component_type], 
@@ -57,7 +59,9 @@ def update_spare_part(spare_part_id: int, spare_part_in: SparePartUpdate, db: Se
             detail="Componente no encontrado"
         )
     if spare_part_in.name is not None:
-        validation = crud_spare_part.get_by_other(db, value=spare_part_in.name, field="name")
+        validation = crud_spare_part.get_by_other(
+            db, value=spare_part_in.name, field="name"
+        )
         if validation and validation.id != spare_part_id:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT, 

@@ -228,7 +228,6 @@ class OrderSparePartResponse(OrderSparePartBase):
 
 class OrderSparePartUpdate(BaseModel):
     quantity: EmptyIntToNone = None
-    repair_order_id: EmptyIntToNone = None
     spare_part_id: EmptyIntToNone = None
 
 # =========================================================================
@@ -257,7 +256,7 @@ class ServiceTypeUpdate(BaseModel):
 
 class OrderServiceBase(BaseModel):
     repair_order_id: int
-    service_types_id: int
+    service_type_id: int
 
 class OrderServiceCreate(OrderServiceBase):
     pass
@@ -268,8 +267,7 @@ class OrderServiceResponse(OrderServiceBase):
     model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class OrderServiceUpdate(BaseModel):
-    repair_order_id: EmptyIntToNone = None
-    service_types_id: EmptyIntToNone = None
+    service_type_id: EmptyIntToNone = None
 
 # =========================================================================
 #----------------------------------STORAGE---------------------------------

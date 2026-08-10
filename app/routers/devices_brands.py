@@ -48,7 +48,7 @@ def read_devices_brands(
 ):
     """Retrieves a paginated list of devices brands or performs a real-time search by sending 'q'."""
     if q and q.strip():
-        return crud_device_brand.search(
+        return crud_device_brand.search_ilike(
             db=db,
             query=q,
             search_fields=[DeviceBrand.name],

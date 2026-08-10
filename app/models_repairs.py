@@ -179,7 +179,7 @@ class OrderService(Base):
 
     #ForeingKeys
     repair_order_id = Column(Integer, ForeignKey("repairs_orders.id"), nullable=False)
-    service_types_id = Column(Integer, ForeignKey("service_types.id"), nullable=False)
+    service_type_id = Column(Integer, ForeignKey("service_types.id"), nullable=False)
 
     #Relationships
     repair_order = relationship("RepairOrder", back_populates="order_services")

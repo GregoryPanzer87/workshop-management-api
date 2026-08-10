@@ -35,7 +35,7 @@ def read_devices_types(
 ):
     """Retrieves a paginated list of devices types or performs a real-time search by sending 'q'."""
     if q and q.strip():
-        return crud_device_type.search(
+        return crud_device_type.search_ilike(
             db=db, 
             query=q, 
             search_fields=[DeviceType.name, DeviceType.prefix], 
