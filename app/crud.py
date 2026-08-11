@@ -226,9 +226,9 @@ class RepairOrderCRUD(CRUDBase[RepairOrder, RepairOrderCreate, RepairOrderUpdate
 
 # --- EMPLOYEE CRUD (LOGIC DELETE) ---
 class EmployeeCRUD(CRUDBase[EmployeeDirectory, EmployeeDirectoryCreate, EmployeeDirectoryUpdate]):
-    def deactivate(self, db: Session, employee_id: int):
+    def delete(self, db: Session, id: int):
         """Deactivate an employee (is_active = False) instead of deleting it"""
-        db_employee = self.get_by_id(db, employee_id)
+        db_employee = self.get_by_id(db, id)
         if db_employee:
             db_employee.is_active = False
             db.commit()
@@ -247,6 +247,16 @@ class TechnicianCRUD(CRUDBase[Technician, TechnicianCreate, TechnicianUpdate]):
             .where(EmployeeDirectory.employee_code == employee_code)
         )
         return db.scalar(stmt)
+
+    def delete(self, db: Session, id: int):
+        """Deactivate an technician (is_active = False) instead of deleting it"""
+        db_technician = self.get_by_id(db, id)
+        if db_technician:
+            db_technician.is_active = False
+            db.commit()
+            db.refresh(db_technician)
+            return db_technician
+        return None
 
 # --- STORAGE CRUD (DELETE) ---
 class StorageCRUD(CRUDBase[Storage, StorageCreate, StorageUpdate]):

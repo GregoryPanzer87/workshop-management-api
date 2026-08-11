@@ -81,7 +81,8 @@ class Technician(Base):
     commission = Column(Integer, nullable=True)
 
     #ForeingKeys
-    employee_id = Column(Integer, ForeignKey("employee_directory.id"), nullable=False)
+    employee_id = Column(Integer, ForeignKey("employee_directory.id"), nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
 
     #Relationships
     employee = relationship("EmployeeDirectory", back_populates="technicians")

@@ -21,7 +21,7 @@ def create_device(device_in: DeviceCreate, db: Session = Depends(get_db)):
         if not db_device_type:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="El tipo de dispositivo especificado no existe",
+                detail="El tipo de equipo especificado no existe",
             )
 
         while True:

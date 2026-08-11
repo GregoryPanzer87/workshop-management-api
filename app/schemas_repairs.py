@@ -121,8 +121,9 @@ class DeviceUpdate(BaseModel):
 
 class TechnicianBase(BaseModel):
     commission: EmptyIntToNone = None
+    is_active: bool = True
 
-    employee_id: int
+    employee_id: EmptyIntToNone = None
 
 class TechnicianCreate(TechnicianBase):
     pass
@@ -134,6 +135,7 @@ class TechnicianResponse(TechnicianBase):
 
 class TechnicianUpdate(BaseModel):
     commission: EmptyIntToNone = None
+    is_active: EmptyBoolToNone = None
 
     employee_id: EmptyIntToNone = None
 
