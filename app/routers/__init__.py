@@ -9,6 +9,7 @@ from .service_types import router as service_types_router
 from .order_spare_parts import router as order_spare_parts_router
 from .order_services import router as order_services_router
 from .technicians import router as technicians_router
+from .storage import router as storage_router
 
 __all__ = [
     "auth_router",
@@ -21,5 +22,6 @@ __all__ = [
     "spare_parts_router",
     "order_spare_parts_router",
     "service_types_router",
-    "order_services_router"
+    "order_services_router",
+    "storage_router"
 ]

@@ -260,14 +260,14 @@ class TechnicianCRUD(CRUDBase[Technician, TechnicianCreate, TechnicianUpdate]):
 
 # --- STORAGE CRUD (DELETE) ---
 class StorageCRUD(CRUDBase[Storage, StorageCreate, StorageUpdate]):
-    def remove_safely(self, db: Session, device_id: int):
-        db_storage = self.get_by_id(db, device_id)
-        if not db_storage:
-            return None
-
-        db.delete(db_storage)
-        db.commit()
-        return db_storage
+    def get_by_serial_number(self, db: Session, serial_number: str):
+        """Search a device using the serial_number"""
+        stmt =  (
+            select(Storage)
+            .join(Device)
+            .where(Device.serial_number == serial_number)
+        )
+        return db.scalar(stmt)
 
 # --- USER CRUD ---
 class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
