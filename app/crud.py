@@ -163,16 +163,11 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         return db_obj
 
-    def delete(self, db: Session, id: int) -> Optional[ModelType]:
-        db_delete = self.get_by_id(db, id)
-
-        if not db_delete:
-            return None
-        
-        db.delete(db_delete)
+    def delete(self, db: Session, db_obj:  ModelType) -> Optional[ModelType]:   
+        db.delete(db_obj)
         db.commit()
 
-        return db_delete
+        return db_obj
         
 # =========================================================================
 # SPECIALIST CLASS (INHERITANCE CRUDBase)
@@ -180,19 +175,14 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
 # --- CLIENT CRUD (SAFE DELETE) ---
 class ClientCRUD(CRUDBase[Client, ClientCreate, ClientUpdate]):
-    def delete(self, db: Session, id: int) :
-        """Attempt to delete a client safely"""
-        db_client = self.get_by_id(db, id)
-        if not db_client:
-            return None
-        
-        # Validación defensiva si tiene ordenes asociadas
-        if hasattr(db_client, 'repairs_orders') and db_client.repairs_orders:
+    def delete(self, db: Session, db_obj: Client) :
+        """Attempt to delete a client safely"""      
+        if hasattr(db_obj, 'repairs_orders') and db_obj.repairs_orders:
             raise ValueError("No se puede eliminar un cliente con historial de reparaciones.")
             
-        db.delete(db_client)
+        db.delete(db_obj)
         db.commit()
-        return db_client
+        return db_obj
 
 # --- DEVICE CRUD (CHANGE OWNER) ---
 class DeviceCRUD(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
@@ -210,30 +200,27 @@ class DeviceCRUD(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
 
 # --- REPAIR ORDER CRUD (SAFE DELETE) ---
 class RepairOrderCRUD(CRUDBase[RepairOrder, RepairOrderCreate, RepairOrderUpdate]):
-    def delete(self, db: Session, id: int) -> Optional[RepairOrder]:
+    def delete(self, db: Session, db_obj: RepairOrder) -> RepairOrder:
         """Attempt to delete a order repair safely"""
-        db_order_repair = self.get_by_id(db, id)
-        if not db_order_repair:
-            return None
-            
         # Validación defensiva si tiene ordenes asociadas
-        if (hasattr(db_order_repair, 'order_spare_parts') and db_order_repair.order_spare_parts) or (hasattr(db_order_repair, 'order_services') and db_order_repair.order_services):
+        if (
+        (hasattr(db_obj, 'order_spare_parts') and db_obj.order_spare_parts) or 
+        (hasattr(db_obj, 'order_services') and db_obj.order_services)
+        ):
             raise ValueError("No se puede eliminar una orden con repuestos o servicios realizados.")
                 
-        db.delete(db_order_repair)
+        db.delete(db_obj)
         db.commit()
-        return db_order_repair
+        return db_obj
 
 # --- EMPLOYEE CRUD (LOGIC DELETE) ---
 class EmployeeCRUD(CRUDBase[EmployeeDirectory, EmployeeDirectoryCreate, EmployeeDirectoryUpdate]):
-    def delete(self, db: Session, id: int):
+    def delete(self, db: Session, db_obj: EmployeeDirectory) -> EmployeeDirectory:
         """Deactivate an employee (is_active = False) instead of deleting it"""
-        db_employee = self.get_by_id(db, id)
-        if db_employee:
-            db_employee.is_active = False
-            db.commit()
-            db.refresh(db_employee)
-            return db_employee
+        db_obj.is_active = False
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
         return None
 
 
@@ -248,15 +235,12 @@ class TechnicianCRUD(CRUDBase[Technician, TechnicianCreate, TechnicianUpdate]):
         )
         return db.scalar(stmt)
 
-    def delete(self, db: Session, id: int):
+    def delete(self, db: Session, db_obj: Technician) -> Technician:
         """Deactivate an technician (is_active = False) instead of deleting it"""
-        db_technician = self.get_by_id(db, id)
-        if db_technician:
-            db_technician.is_active = False
-            db.commit()
-            db.refresh(db_technician)
-            return db_technician
-        return None
+        db_obj.is_active = False
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
 
 # --- STORAGE CRUD (DELETE) ---
 class StorageCRUD(CRUDBase[Storage, StorageCreate, StorageUpdate]):

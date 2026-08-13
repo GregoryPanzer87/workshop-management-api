@@ -124,5 +124,5 @@ def delete_storage_entry(storage_id: int, db: Session = Depends(get_db)):
             client_name = db_client.name if db_client else "Desconocido"
             detail_msg = f"Equipo de {client_name} (Serial: {db_device.serial_number})"
 
-    crud_storage.delete(db, id=storage_id)
+    crud_storage.delete(db, db_storage)
     return {"message": f"{detail_msg} eliminado correctamente del depósito"}

@@ -94,19 +94,11 @@ def update_device_brand(
     "/{device_brand_id}", dependencies=[Depends(require_roles(LEVEL_ADVANCE))]
 )
 def delete_device_brand(device_brand_id: int, db: Session = Depends(get_db)):
-    try:
-        deleted_devices_brands = crud_device_brand.delete(
-            db, id=device_brand_id
-        )
-        if not deleted_devices_brands:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Marca no encontrada",
-            )
-        return {
-            "message": f"Marca de equipo '{deleted_devices_brands.name}' eliminada correctamente"
-        }
-    except ValueError as e:
+    db_devices_brands = crud_device_brand.get_by_id(db, device_brand_id)
+    if not db_devices_brands:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Marca no encontrada",
         )
+    crud_device_brand.delete(db, db_devices_brands)
+    return {"message": f"Marca de equipo '{db_devices_brands.name}' eliminada correctamente"}

@@ -105,23 +105,17 @@ def update_order_spare_part(
     "/{order_spare_part_id}", dependencies=[Depends(require_roles(LEVEL_ADVANCE))]
 )
 def delete_order_spare_part(order_spare_part_id: int, db: Session = Depends(get_db)):
-    try:
-        deleted_order_spare_part = crud_order_spare_part.delete(
-            db, id=order_spare_part_id
-        )
-        if not deleted_order_spare_part:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Repuesto de orden no encontrado",
-            )
-        db_spare_part = crud_spare_part.get_by_id(
-                    db, deleted_order_spare_part.spare_part_id
-                )
-        spare_part_name = db_spare_part.name if db_spare_part else "Desconocido"
-        return {
-            "message": f"Repuesto '{spare_part_name}' de la orden #{deleted_order_spare_part.repair_order_id} eliminado correctamente"
-        }
-    except ValueError as e:
+    db_order_spare_part = crud_order_spare_part.get_by_id(db, order_spare_part_id)
+    if not db_order_spare_part:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Servicio de orden no encontrado",
         )
+    
+    db_spare_part = crud_spare_part.get_by_id(
+        db, db_order_spare_part.spare_part_id
+        )
+    spare_part_name = db_spare_part.name if db_spare_part else "Desconocido"
+
+    crud_order_spare_part.delete(db, db_spare_part)
+    return {"message": f"Repuesto '{spare_part_name}' de la orden #{db_order_spare_part.repair_order_id} eliminado correctamente"}

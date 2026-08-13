@@ -14,15 +14,15 @@ def create_client(client_in: ClientCreate, db: Session = Depends(get_db)):
     errors = []
     if client_in.national_id:
         if crud_client.get_by_other(db, value=client_in.national_id, field="national_id"):
-            errors.append("La Cédula/RIF ya está registrada")
+            errors.append("La Cédula/RIF ya está vinculado a otro cliente")
     
     if client_in.phone:
         if crud_client.get_by_other(db, value=client_in.phone, field="phone"):
-            errors.append("El número de teléfono ya está registrado")
+            errors.append("El número de teléfono ya está vinculado a otro cliente")
 
     if client_in.mail:
         if crud_client.get_by_other(db, value=client_in.mail, field="mail"):
-            errors.append("El correo electrónico ya está registrado")
+            errors.append("El correo electrónico ya está vinculado a otro cliente")
 
     if errors:
         raise HTTPException(
@@ -64,17 +64,17 @@ def update_client(client_id: int, client_in: ClientUpdate, db: Session = Depends
     if client_in.national_id:
         val_nat = crud_client.get_by_other(db, value=client_in.national_id, field="national_id")
         if val_nat and val_nat.id != client_id:
-            errors.append("La Cédula/RIF ya está registrada")
+            errors.append("La Cédula/RIF ya está vinculado a otro cliente")
 
     if client_in.phone:
         val_phone = crud_client.get_by_other(db, value=client_in.phone, field="phone")
         if val_phone and val_phone.id != client_id:
-            errors.append("El número de teléfono ya está registrado")
+            errors.append("El número de teléfono ya está vinculado a otro cliente")
 
     if client_in.mail:
         val_mail = crud_client.get_by_other(db, value=client_in.mail, field="mail")
         if val_mail and val_mail.id != client_id:
-            errors.append("El correo electrónico ya está registrado")
+            errors.append("El correo electrónico ya está vinculado a otro cliente")
 
     if errors:
         raise HTTPException(
@@ -86,16 +86,11 @@ def update_client(client_id: int, client_in: ClientUpdate, db: Session = Depends
 
 @router.delete("/{client_id}", dependencies=[Depends(require_roles(LEVEL_ADVANCE))])
 def delete_client(client_id: int, db: Session = Depends(get_db)):
-    try:
-        deleted_client = crud_client.delete(db, client_id=client_id)
-        if not deleted_client:
+        db_client = crud_client.get_by_id(db, client_id)
+        if not db_client:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, 
-                detail="Cliente no encontrado"
-            )
-        return {"message": f"Cliente '{deleted_client.name}' eliminado correctamente"}
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+                    detail="Cliente no encontrado"
+                )
+        crud_client.delete(db, db_client)
+        return {"message": f"Cliente '{db_client.name}' eliminado correctamente"}

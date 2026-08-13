@@ -104,25 +104,17 @@ def update_order_service(
     "/{order_service_id}", dependencies=[Depends(require_roles(LEVEL_ADVANCE))]
 )
 def delete_order_service(order_service_id: int, db: Session = Depends(get_db)):
-    try:
-        deleted_order_service = crud_order_service.delete(
-            db, id=order_service_id
-        )
-        if not deleted_order_service:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Servicio de orden no encontrado",
-            )
-
-        db_service_type = crud_service_type.get_by_id(
-            db, deleted_order_service.service_type_id
-        )
-        service_name = db_service_type.name if db_service_type else "Desconocido"
-
-        return {
-            "message": f"Servicio '{service_name}' de la orden #{deleted_order_service.repair_order_id} eliminado correctamente"
-        }
-    except ValueError as e:
+    db_order_service = crud_order_service.get_by_id(db, order_service_id)
+    if not db_order_service:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Servicio de orden no encontrado",
         )
+    
+    db_service_type = crud_service_type.get_by_id(
+        db, db_order_service.service_type_id
+        )
+    service_type_name = db_service_type.name if db_service_type else "Desconocido"
+
+    crud_order_service.delete(db, db_order_service)
+    return {"message": f"Servicio '{service_type_name}' de la orden #{db_order_service.repair_order_id} eliminado correctamente"}

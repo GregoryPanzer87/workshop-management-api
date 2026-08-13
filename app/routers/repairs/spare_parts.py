@@ -58,6 +58,7 @@ def update_spare_part(spare_part_id: int, spare_part_in: SparePartUpdate, db: Se
             status_code=status.HTTP_404_NOT_FOUND, 
             detail="Componente no encontrado"
         )
+    
     if spare_part_in.name is not None:
         validation = crud_spare_part.get_by_other(
             db, value=spare_part_in.name, field="name"

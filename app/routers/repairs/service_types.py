@@ -64,6 +64,7 @@ def update_service_type(service_type_id: int, service_type_in: ServiceTypeUpdate
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Servicio no encontrado",
         )
+    
     if service_type_in.name is not None:
         validation = crud_service_type.get_by_other(
             db, value=service_type_in.name, field="name"

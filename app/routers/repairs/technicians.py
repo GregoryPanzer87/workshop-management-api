@@ -109,10 +109,15 @@ def update_technician(technician_id: int,technician_in: TechnicianUpdate,db: Ses
 @router.delete("/{technician_id}", dependencies=[Depends(require_roles(LEVEL_ADVANCE))])
 def delete_technician(technician_id: int, db: Session = Depends(get_db)):
     """Soft delete / Deactivate a technician."""
-    deleted_tech = crud_technician.delete(db, technician_id)
-    if not deleted_tech:
+    db_technician = crud_technician.get_by_id(db, technician_id)
+    if not db_technician:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Técnico no encontrado",
         )
-    return {"message": f"Técnico #{technician_id} desactivado correctamente"}
+
+    db_employee = crud_employee.get_by_id(db, db_technician.employee_id)
+    technician_name = db_employee.full_name if db_employee else "Desconocido"
+
+    crud_technician.delete(db, db_technician)
+    return {"message": f"Técnico {technician_name} #{technician_id} desactivado correctamente"}

@@ -78,16 +78,12 @@ def update_repair_order(repair_order_id: int, repair_order_in: RepairOrderUpdate
 
 @router.delete("/{repair_order_id}", dependencies=[Depends(require_roles(LEVEL_ADVANCE))])
 def delete_repair_order(repair_order_id: int, db: Session = Depends(get_db)):
-    try:
-        deleted_repair_order = crud_repair_order.delete(db, repair_order_id=repair_order_id)
-        if not deleted_repair_order:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, 
-                detail="Orden de reparacion no encontrada"
-            )
-        return {"message": f"Orden de reparacion '{repair_order_id}' eliminada correctamente"}
-    except ValueError as e:
+    db_repair_order = crud_repair_order.get_by_id(db, repair_order_id)
+    if not db_repair_order:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Orden de reparacion no encontrada"
         )
+
+    crud_repair_order.delete(db, db_repair_order)
+    return {"message": f"Orden de reparacion #'{repair_order_id}' eliminada correctamente"}
