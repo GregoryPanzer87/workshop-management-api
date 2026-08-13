@@ -17,7 +17,7 @@ def add_device_to_storage(storage_in: StorageCreate, db: Session = Depends(get_d
         if not db_device:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="El equipo especificado no existe",
+                detail="El equipo no existe",
             )
 
         existing_device = crud_storage.get_other_id(

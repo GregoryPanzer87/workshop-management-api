@@ -290,11 +290,6 @@ class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
         db.refresh(db_user)
         return db_user
 
-    def get_by_user(self, db: Session, user: str) -> Optional[User]:
-        """Get a record by its username"""
-        stmt = select(User).where(User.username == user)
-        return db.scalar(stmt)
-
 # =========================================================================
 # 3. READY-TO-USE INSTANCES FOR MAIN
 # =========================================================================
