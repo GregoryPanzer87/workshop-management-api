@@ -14,7 +14,7 @@ class EmployeeDirectoryBase(BaseModel):
     tax_id: str
     short_address: str
     occupation: str
-    employee_code: str
+    employee_code: str = None
     entry_date: date
     is_active: EmptyBoolToNone = None
     tax_id_doc: EmptyStrToNone = None
@@ -24,8 +24,14 @@ class EmployeeDirectoryBase(BaseModel):
 class EmployeeDirectoryCreate(EmployeeDirectoryBase):
     pass
 
+class UserCredentials(BaseModel):
+    username: str
+    password: str
+
 class EmployeeDirectoryResponse(EmployeeDirectoryBase):
     id: int
+    employee_code: str
+    initial_credentials: Optional[UserCredentials]
 
     model_config = {"from_attributes": True, "str_strip_whitespace": True}
 

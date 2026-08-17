@@ -75,8 +75,6 @@ def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
             detail=errors2,
         )
     
-    user_in.password = get_password_hash(user_in.password) 
-    
     return crud_user.create(db, obj_in=user_in)
 
 @router.patch("/{user_id}", response_model=UserResponse, dependencies=[Depends(require_roles(LEVEL_BASIC))])
@@ -114,9 +112,6 @@ def update_user(user_id: int,user_in: UserUpdate,db: Session = Depends(get_db), 
         user_in.is_active = db_user.is_active
         user_in.employee_id = db_user.employee_id
         user_in.client_id = db_user.client_id
-
-    if user_in.password:
-        user_in.password = get_password_hash(user_in.password)    
         
     if user_in.client_id and user_in.client_id != db_user.client_id:
         db_client = crud_client.get_by_id(db, user_in.client_id)
