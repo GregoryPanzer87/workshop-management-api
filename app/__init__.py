@@ -51,7 +51,7 @@ from .crud import (
     crud_client, crud_device_type, crud_device_brand, crud_device, crud_employee, 
     crud_technician, crud_repair_order, crud_spare_part, crud_order_spare_part, 
     crud_service_type, crud_order_service, crud_expense, crud_attendance,
-    crud_user, crud_audit, crud_storage
+    crud_user, crud_audit, crud_storage, ModelType, CRUDBase
 )
 
 from .config import (

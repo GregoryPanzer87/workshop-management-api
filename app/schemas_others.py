@@ -14,7 +14,7 @@ class EmployeeDirectoryBase(BaseModel):
     tax_id: str
     short_address: str
     occupation: str
-    employee_code: str = None
+    employee_code: EmptyStrToNone = None
     entry_date: date
     is_active: EmptyBoolToNone = None
     tax_id_doc: EmptyStrToNone = None
@@ -147,7 +147,7 @@ class AttendanceUpdate(BaseModel):
 class AuditLogBase(BaseModel):
     action: str
     entity: str
-    entity_id: int
+    entity_id: EmptyIntToNone = None
     details: EmptyStrToNone = None
 
     user_id: int

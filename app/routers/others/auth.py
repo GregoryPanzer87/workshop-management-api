@@ -6,7 +6,7 @@ from app import (
     User, UserCreate, UserResponse, UserUpdate, 
     crud_user, crud_client, crud_employee, get_db
 )
-from app.core.security import verify_password, create_access_token, get_password_hash
+from app.core.security import verify_password, create_access_token
 from app.api.deps import require_roles
 from app.core.security import LEVEL_BASIC, LEVEL_ADVANCE
 

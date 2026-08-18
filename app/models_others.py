@@ -64,7 +64,7 @@ class AuditLog(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     action = Column(String(50), nullable=False)
     entity = Column(String(50), nullable=False)
-    entity_id = Column(Integer, nullable=False)
+    entity_id = Column(Integer, nullable=True)
     details = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 

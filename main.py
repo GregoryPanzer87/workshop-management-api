@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from app.database import engine, Base
-from app.routers.others import auth_router
+from app.routers.others import *
 from app.routers.repairs import *
 
 Base.metadata.create_all(bind=engine)
@@ -19,3 +19,5 @@ app.include_router(order_spare_parts_router)
 app.include_router(service_types_router)
 app.include_router(order_services_router)
 app.include_router(storage_router)
+app.include_router(employee_directory_router)
+app.include_router(audit_log_router)
