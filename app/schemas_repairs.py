@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from datetime import date
 from enum import Enum
@@ -11,8 +11,8 @@ from app.config import EmptyEmailToNone, EmptyStrToNone, EmptyFloatToNone, Empty
 class ClientBase(BaseModel):
     national_id: EmptyStrToNone = None
     name: str
-    phone: EmptyStrToNone = None
-    mail: EmptyEmailToNone = None
+    phone_number: EmptyStrToNone = None
+    email: EmptyEmailToNone = None
     short_address: EmptyStrToNone = None
 
 class ClientCreate(ClientBase):
@@ -21,20 +21,29 @@ class ClientCreate(ClientBase):
 class ClientResponse(ClientBase):
     id: int
 
-    model_config = {"from_attributes": True, "str_strip_whitespace": True}
+    model_config = ConfigDict(
+        from_attributes=True,
+        str_strip_whitespace=True
+    )
 
 class ClientMinResponse(BaseModel):
     id: int
     name: str
-    national_id: EmptyStrToNone = None
 
-    model_config = {"from_attributes": True, "str_strip_whitespace": True}
+    model_config = ConfigDict(
+        from_attributes=True,
+        str_strip_whitespace=True
+    )
+
+class OrderClientResponse(ClientMinResponse):
+    national_id: EmptyStrToNone = None
+    phone_number: EmptyStrToNone = None
 
 class ClientUpdate(BaseModel):
     national_id: EmptyStrToNone = None
     name: EmptyStrToNone = None
-    phone: EmptyStrToNone = None
-    mail: EmptyEmailToNone = None
+    phone_number: EmptyStrToNone = None
+    email: EmptyEmailToNone = None
     short_address: EmptyStrToNone = None
 
 # =========================================================================
@@ -51,7 +60,10 @@ class DeviceTypeCreate(DeviceTypeBase):
 class DeviceTypeResponse(DeviceTypeBase):
     id: int
 
-    model_config = {"from_attributes": True, "str_strip_whitespace": True}
+    model_config = ConfigDict(
+        from_attributes=True,
+        str_strip_whitespace=True
+    )
 
 class DeviceTypeUpdate(BaseModel):
     name: EmptyStrToNone = None
@@ -71,7 +83,10 @@ class DeviceBrandCreate(DeviceBrandBase):
 class DeviceBrandResponse(DeviceBrandBase):
     id: int
 
-    model_config = {"from_attributes": True, "str_strip_whitespace": True}
+    model_config = ConfigDict(
+        from_attributes=True,
+        str_strip_whitespace=True
+    )
 
 class DeviceBrandUpdate(BaseModel):
     name: EmptyStrToNone = None
@@ -84,7 +99,7 @@ class DeviceBase(BaseModel):
     client_id: int
     model: str
     serial_number: EmptyStrToNone = None
-    description: str
+    description: EmptyStrToNone = None
 
     device_type_id: int
     device_brand_id: int
@@ -92,23 +107,37 @@ class DeviceBase(BaseModel):
 class DeviceCreate(DeviceBase):
     pass
 
-class DeviceResponse(DeviceBase):
-    id: int
-
-    model_config = {"from_attributes": True, "str_strip_whitespace": True}
-
-class DeviceMinResponse(BaseModel):
+class DeviceBaseResponse(DeviceBase):
     id: int
     model: str
-    description: EmptyStrToNone = None
     serial_number: EmptyStrToNone = None
+    description: EmptyStrToNone = None
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        str_strip_whitespace=True
+    )
+
+class DeviceResponse(DeviceBase):
+    client_id: ClientMinResponse
     device_type_id: DeviceTypeResponse
     device_brand_id: DeviceBrandResponse
 
-    model_config = {"from_attributes": True, "str_strip_whitespace": True}
+    model_config = ConfigDict(
+        from_attributes=True,
+        str_strip_whitespace=True
+    )
+
+class DeviceMinResponse(DeviceBase):
+    device_type_id: DeviceTypeResponse
+    device_brand_id: DeviceBrandResponse
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        str_strip_whitespace=True
+    )
 
 class DeviceUpdate(BaseModel):
-    client_id: EmptyIntToNone = None
     model: EmptyStrToNone = None
     serial_number: EmptyStrToNone = None
     description: EmptyStrToNone = None
@@ -131,7 +160,10 @@ class TechnicianCreate(TechnicianBase):
 class TechnicianResponse(TechnicianBase):
     id: int
 
-    model_config = {"from_attributes": True, "str_strip_whitespace": True}
+    model_config = ConfigDict(
+        from_attributes=True,
+        str_strip_whitespace=True
+    )
 
 class TechnicianUpdate(BaseModel):
     commission: EmptyIntToNone = None
@@ -165,10 +197,13 @@ class RepairOrderCreate(RepairOrderBase):
 
 class RepairOrderResponse(RepairOrderBase):
     id: int
-    client: Optional[ClientMinResponse] = None
+    client: Optional[OrderClientResponse] = None
     device: Optional[DeviceMinResponse] = None
 
-    model_config = {"from_attributes": True, "str_strip_whitespace": True}
+    model_config = ConfigDict(
+        from_attributes=True,
+        str_strip_whitespace=True
+    )
 
 class RepairOrderDetailResponse(RepairOrderResponse):
     client: ClientResponse
@@ -203,7 +238,10 @@ class SparePartCreate(SparePartBase):
 class SparePartResponse(SparePartBase):
     id: int
 
-    model_config = {"from_attributes": True, "str_strip_whitespace": True}
+    model_config = ConfigDict(
+        from_attributes=True,
+        str_strip_whitespace=True
+    )
 
 class SparePartUpdate(BaseModel):
     name: EmptyStrToNone = None
@@ -226,7 +264,10 @@ class OrderSparePartCreate(OrderSparePartBase):
 class OrderSparePartResponse(OrderSparePartBase):
     id: int
 
-    model_config = {"from_attributes": True, "str_strip_whitespace": True}
+    model_config = ConfigDict(
+        from_attributes=True,
+        str_strip_whitespace=True
+    )
 
 class OrderSparePartUpdate(BaseModel):
     quantity: EmptyIntToNone = None
@@ -246,7 +287,10 @@ class ServiceTypeCreate(ServiceTypeBase):
 class ServiceTypeResponse(ServiceTypeBase):
     id: int
 
-    model_config = {"from_attributes": True, "str_strip_whitespace": True}
+    model_config = ConfigDict(
+        from_attributes=True,
+        str_strip_whitespace=True
+    )
 
 class ServiceTypeUpdate(BaseModel):
     name: EmptyStrToNone = None
@@ -266,7 +310,10 @@ class OrderServiceCreate(OrderServiceBase):
 class OrderServiceResponse(OrderServiceBase):
     id: int
 
-    model_config = {"from_attributes": True, "str_strip_whitespace": True}
+    model_config = ConfigDict(
+        from_attributes=True,
+        str_strip_whitespace=True
+    )
 
 class OrderServiceUpdate(BaseModel):
     service_type_id: EmptyIntToNone = None
@@ -287,7 +334,10 @@ class StorageCreate(StorageBase):
 class StorageResponse(StorageBase):
     id: int
 
-    model_config = {"from_attributes": True, "str_strip_whitespace": True}
+    model_config = ConfigDict(
+        from_attributes=True,
+        str_strip_whitespace=True
+    )
 
 class StorageUpdate(BaseModel):
     entry_date: EmptyDateToNone = None

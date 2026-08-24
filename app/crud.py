@@ -1,7 +1,13 @@
-from typing import Generic, TypeVar, Type, Optional, List, Any
+from typing import (
+    Generic, TypeVar,
+    Type, Optional,
+    List, Any, Union,
+    Dict, Sequence
+)
 from sqlalchemy.orm import Session
 from sqlalchemy import select, or_
 from pydantic import BaseModel
+from sqlalchemy.orm import joinedload
 from app import (
     # Client
     Client, ClientCreate, ClientUpdate,
@@ -52,30 +58,47 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     #---------------------------------------------------------------------------------------
 
-    def get_by_id(self, db: Session, id: int) -> Optional[ModelType]:
+    def get_by_id(self, db: Session, id: int, options: Optional[Sequence[Any]] = None) -> Optional[ModelType]:
         """Get a record by its ID"""
-        return db.get(self.model, id)
+        stmt = select(self.model).where(self.model.id == id)
+
+        if options:
+            stmt = stmt.options(*options)
+
+        return db.scalar(stmt)
 
     #---------------------------------------------------------------------------------------
     
-    def get_by_other(self, db: Session, value: str, field: str) -> Optional[ModelType]:
+    def get_by_other(self, db: Session, value: str, field: str, options: Optional[Sequence[Any]] = None) -> Optional[ModelType]:
         """Get a record by other values"""
         column = getattr(self.model, field)
         stmt = select(self.model).where(column == value)
+        
+        if options:
+            stmt = stmt.options(*options)
+
         return db.scalar(stmt)
 
     #---------------------------------------------------------------------------------------
 
-    def get_multi(self, db: Session, skip: int = 0, limit: int = 100) -> List[ModelType]:
+    def get_multi(self, db: Session, options: Optional[Sequence[Any]] = None, skip: int = 0, limit: int = 100) -> List[ModelType]:
         """Retrieves a list of paginated records"""
         stmt = select(self.model).offset(skip).limit(limit)
+
+        if options:
+            stmt = stmt.options(*options)
+
         return list(db.scalars(stmt).all())
 
     #---------------------------------------------------------------------------------------
     
-    def get_other_id(self, db: Session, id: int, field: str, skip: int = 0, limit: int = 20) -> List[ModelType]:
+    def get_other_id(self, db: Session, id: int, field: str, options: Optional[Sequence[Any]] = None, skip: int = 0, limit: int = 20) -> List[ModelType]:
         column = getattr(self.model, field)
         stmt = select(self.model).where(column == id).offset(skip).limit(limit)
+
+        if options:
+            stmt = stmt.options(*options)
+
         return list(db.scalars(stmt).all())
 
     #---------------------------------------------------------------------------------------
@@ -90,39 +113,21 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return db_obj
 
     #---------------------------------------------------------------------------------------
-    
-    def search_where(
-        self,
-        db: Session,
-        value_1: str,
-        value_2: str,
-        field_1: str,
-        field_2: str
-    ) -> Optional[ModelType]:
-        column_1 = getattr(self.model, field_1)
-        column_2 = getattr(self.model, field_2)
-        stmt = select(self.model).where(
-            column_1 == value_1,
-            column_2 == value_2
-        )
-        return db.scalar(stmt)
 
-    #---------------------------------------------------------------------------------------
+    def search_where_by_fields(self, db: Session, **filters) -> Optional[ModelType]:
+        if not filters:
+            return None
 
-    def search_where_by_IDs(
-            self,
-            db: Session,
-            id_1: int,
-            id_2: int,
-            field_1: str,
-            field_2: str
-    ) -> Optional[ModelType]:
-        column_1 = getattr(self.model, field_1)
-        column_2 = getattr(self.model, field_2)
-        stmt = select(self.model).where(
-            column_1 == id_1,
-            column_2 == id_2
-        )
+        conditions = [
+            getattr(self.model, field) == value 
+            for field, value in filters.items() 
+            if hasattr(self.model, field) and value is not None
+        ]
+        
+        if not conditions:
+            return None
+
+        stmt = select(self.model).where(*conditions)
         return db.scalar(stmt)
 
     #---------------------------------------------------------------------------------------
@@ -131,28 +136,48 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self, 
         db: Session, 
         query: str, 
-        search_fields: List[Any], 
+        search_fields: List[Any],
+        joins: Optional[List[Any]] = None, 
+        options: Optional[List[Any]] = None,  # <- Agregamos options
         limit: int = 20
     ) -> List[ModelType]:
-        """Search in tables by datebase"""
+        """Search in tables by database with support for eager loading."""
         if not query or not query.strip():
-            return self.get_multi(db, limit=limit)
+            return self.get_multi(db, limit=limit, options=options)
 
         clean_query = query.strip()
         search_pattern = f"%{clean_query}%"
-        
+
         filters = [field.ilike(search_pattern) for field in search_fields if field is not None]
-
         if not filters:
-            return self.get_multi(db, limit=limit)
+            return self.get_multi(db, limit=limit, options=options)
 
-        stmt = select(self.model).where(or_(*filters)).limit(limit)
+        stmt = select(self.model)
+
+        if joins:
+            for join_model in joins:
+                stmt = stmt.join(join_model)
+
+        if options:
+            for option in options:
+                stmt = stmt.options(option)
+
+        stmt = stmt.where(or_(*filters)).distinct().limit(limit)
+        
         return list(db.scalars(stmt).all())
 
     #---------------------------------------------------------------------------------------
     
-    def update(self, db: Session, db_obj: ModelType, obj_in: UpdateSchemaType) -> ModelType:
-        update_data = obj_in.model_dump(exclude_unset=True)
+    def update(
+        self, 
+        db: Session, 
+        db_obj: ModelType, 
+        obj_in: Union[UpdateSchemaType, Dict[str, Any]]
+    ) -> ModelType:
+        if isinstance(obj_in, dict):
+            update_data = obj_in
+        else:
+            update_data = obj_in.model_dump(exclude_unset=True)
 
         for field, value in update_data.items():
             setattr(db_obj, field, value)
@@ -242,17 +267,6 @@ class TechnicianCRUD(CRUDBase[Technician, TechnicianCreate, TechnicianUpdate]):
         db.refresh(db_obj)
         return db_obj
 
-# --- STORAGE CRUD (DELETE) ---
-class StorageCRUD(CRUDBase[Storage, StorageCreate, StorageUpdate]):
-    def get_by_serial_number(self, db: Session, serial_number: str):
-        """Search a device using the serial_number"""
-        stmt =  (
-            select(Storage)
-            .join(Device)
-            .where(Device.serial_number == serial_number)
-        )
-        return db.scalar(stmt)
-
 # --- USER CRUD ---
 class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
     def create(self, db: Session, *, obj_in: UserCreate) -> User:
@@ -293,4 +307,4 @@ crud_expense = CRUDBase[Expense, ExpenseCreate, ExpenseUpdate](Expense)
 crud_attendance = CRUDBase[Attendance, AttendanceCreate, AttendanceUpdate](Attendance)
 crud_user = UserCRUD(User)
 crud_audit = CRUDBase[AuditLog, AuditLogCreate, AuditLogUpdate](AuditLog)
-crud_storage = StorageCRUD(Storage)
+crud_storage = CRUDBase[Storage, StorageCreate, StorageUpdate](Storage)

@@ -3,6 +3,7 @@ import json
 from dotenv import load_dotenv
 from pydantic import EmailStr, BeforeValidator
 from typing import Annotated, Optional
+from datetime import date
 
 load_dotenv()
 
@@ -19,4 +20,4 @@ EmptyEmailToNone = Annotated[Optional[EmailStr], BeforeValidator(empty_to_none)]
 EmptyIntToNone = Annotated[Optional[int], BeforeValidator(empty_to_none)]
 EmptyFloatToNone = Annotated[Optional[float], BeforeValidator(empty_to_none)]
 EmptyBoolToNone = Annotated[Optional[bool], BeforeValidator(empty_to_none)]
-EmptyDateToNone = Annotated[Optional[float], BeforeValidator(empty_to_none)]
+EmptyDateToNone = Annotated[Optional[date], BeforeValidator(empty_to_none)]

@@ -1,7 +1,12 @@
-from sqlalchemy import Column, Integer, Float, String, Boolean, Date, DateTime, ForeignKey
-from datetime import datetime, timezone
-from sqlalchemy.orm import relationship
+from datetime import datetime
+from typing import List, Optional, TYPE_CHECKING
+from sqlalchemy import String, ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app import Base
+
+if TYPE_CHECKING:
+    from app import User
+    from app import EmployeeDirectory
 
 # =========================================================================
 # TABLE CLIENTS
@@ -10,64 +15,64 @@ from app import Base
 class Client(Base):
     __tablename__ = "clients"
 
-    #Table Columns
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    national_id = Column(String(20), unique=True, nullable=False)
-    name = Column(String(50), nullable=True)
-    phone = Column(String(20), unique=True, nullable=True)
-    mail = Column(String(100), unique=True, nullable=True)
-    short_address = Column(String(50), nullable=True)
+    # Table Columns
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    national_id: Mapped[Optional[str]] = mapped_column(String(20), unique=True, nullable=True)
+    name: Mapped[str] = mapped_column(String(50), nullable=False)
+    phone_number: Mapped[Optional[str]] = mapped_column(String(20), unique=True, nullable=True)
+    email: Mapped[Optional[str]] = mapped_column(String(100), unique=True, nullable=True)
+    short_address: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
 
-    #Relationships
-    devices = relationship("Device", back_populates="client")
-    repairs_orders = relationship("RepairOrder", back_populates="client")
-    user = relationship("User", back_populates="client")
+    # Relationships
+    devices: Mapped[List["Device"]] = relationship("Device", back_populates="client")
+    repairs_orders: Mapped[List["RepairOrder"]] = relationship("RepairOrder", back_populates="client")
+    user: Mapped[Optional["User"]] = relationship("User", back_populates="client")
 
 # =========================================================================
 # TABLES DEVICES
 # =========================================================================
 
 class DeviceType(Base):
-    __tablename__ = "devices_types"
+    __tablename__ = "device_types"
 
-    #Table Columns
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    name = Column(String(50), unique=True, nullable=False)
-    prefix = Column(String(5), unique=True, nullable=True)
+    # Table Columns
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    prefix: Mapped[Optional[str]] = mapped_column(String(5), unique=True, nullable=True)
     
-    #Relationships
-    devices = relationship("Device", back_populates="device_type")
+    # Relationships
+    devices: Mapped[List["Device"]] = relationship("Device", back_populates="device_type")
 
 class DeviceBrand(Base):
-    __tablename__ = "devices_brands"
+    __tablename__ = "device_brands"
 
-    #Table Columns
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    name = Column(String(50), nullable=False)
+    # Table Columns
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String(50), nullable=False)
 
-    #Relationships
-    devices = relationship("Device", back_populates="device_brand")
+    # Relationships
+    devices: Mapped[List["Device"]] = relationship("Device", back_populates="device_brand")
     
 class Device(Base):
     __tablename__ = "devices"
 
-    #Table Columns
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    model = Column(String(30), nullable=False)
-    serial_number = Column(String(30), unique=True, nullable=True)
-    description = Column(String(200), nullable=False)
+    # Table Columns
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    model: Mapped[str] = mapped_column(String(30), nullable=False)
+    serial_number: Mapped[Optional[str]] = mapped_column(String(30), unique=True, nullable=True)
+    description: Mapped[str] = mapped_column(String(200), nullable=False)
 
-    #ForeingKeys
-    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
-    device_type_id = Column(Integer, ForeignKey("devices_types.id"), nullable=False)
-    device_brand_id = Column(Integer, ForeignKey("devices_brands.id"), nullable=False)
+    # ForeignKeys corregidas (device_types y device_brands en singular)
+    client_id: Mapped[int] = mapped_column(ForeignKey("clients.id"), nullable=False)
+    device_type_id: Mapped[int] = mapped_column(ForeignKey("device_types.id"), nullable=False)
+    device_brand_id: Mapped[int] = mapped_column(ForeignKey("device_brands.id"), nullable=False)
 
-    #Relationships
-    client = relationship("Client", back_populates="devices")
-    device_type = relationship("DeviceType", back_populates="devices")
-    device_brand = relationship("DeviceBrand", back_populates="devices")
-    repairs_orders = relationship("RepairOrder", back_populates="device")
-    storage = relationship("Storage", back_populates="device")
+    # Relationships
+    client: Mapped["Client"] = relationship("Client", back_populates="devices")
+    device_type: Mapped["DeviceType"] = relationship("DeviceType", back_populates="devices")
+    device_brand: Mapped["DeviceBrand"] = relationship("DeviceBrand", back_populates="devices")
+    repairs_orders: Mapped[List["RepairOrder"]] = relationship("RepairOrder", back_populates="device")
+    storage: Mapped[Optional["Storage"]] = relationship("Storage", back_populates="device")
 
 # =========================================================================
 # TABLE TECHNICIANS
@@ -76,17 +81,17 @@ class Device(Base):
 class Technician(Base):
     __tablename__ = "technicians"
 
-    #Table Columns
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    commission = Column(Integer, nullable=True)
+    # Table Columns
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    commission: Mapped[Optional[int]] = mapped_column(nullable=True)
 
-    #ForeingKeys
-    employee_id = Column(Integer, ForeignKey("employee_directory.id"), nullable=True)
-    is_active = Column(Boolean, nullable=False, default=True)
+    # ForeignKeys
+    employee_id: Mapped[Optional[int]] = mapped_column(ForeignKey("employee_directory.id"), nullable=True)
+    is_active: Mapped[bool] = mapped_column(default=True)
 
-    #Relationships
-    employee = relationship("EmployeeDirectory", back_populates="technicians")
-    repairs_orders = relationship("RepairOrder", back_populates="technician")
+    # Relationships
+    employee: Mapped[Optional["EmployeeDirectory"]] = relationship("EmployeeDirectory", back_populates="technicians")
+    repairs_orders: Mapped[List["RepairOrder"]] = relationship("RepairOrder", back_populates="technician")
 
 # =========================================================================
 # TABLE REPAIRS ORDERS
@@ -95,26 +100,26 @@ class Technician(Base):
 class RepairOrder(Base):
     __tablename__ = "repairs_orders"
 
-    #Table Columns
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    entry_date = Column(Date, nullable=False)
-    is_warranty = Column(Boolean, default=False, nullable=False)
-    status = Column(String(30), default="Pendiente", nullable=False)
-    exit_date = Column(Date, nullable=True)
-    agreed_price = Column(Float, nullable=True)
-    legacy_order_id = Column(Integer, nullable= True)
+    # Table Columns
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    entry_date: Mapped[datetime] = mapped_column(nullable=False)
+    is_warranty: Mapped[bool] = mapped_column(default=False)
+    status: Mapped[Optional[str]] = mapped_column(String(30), nullable=False)
+    exit_date: Mapped[Optional[datetime]] = mapped_column(nullable=True)
+    agreed_price: Mapped[Optional[float]] = mapped_column(nullable=True)
+    legacy_order_id: Mapped[Optional[int]] = mapped_column(nullable=True)
 
-    #ForeingKeys
-    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
-    device_id = Column(Integer, ForeignKey("devices.id"), nullable=False)
-    technician_id = Column(Integer, ForeignKey("technicians.id"), nullable=False)
+    # ForeignKeys
+    client_id: Mapped[int] = mapped_column(ForeignKey("clients.id"), nullable=False)
+    device_id: Mapped[int] = mapped_column(ForeignKey("devices.id"), nullable=False)
+    technician_id: Mapped[int] = mapped_column(ForeignKey("technicians.id"), nullable=False)
 
-    #Relationships
-    client = relationship("Client", back_populates="repairs_orders")
-    device = relationship("Device", back_populates="repairs_orders")
-    order_spare_parts = relationship("OrderSparePart", back_populates="repair_order")
-    order_services = relationship("OrderService", back_populates="repair_order")
-    technician = relationship("Technician", back_populates="repairs_orders")
+    # Relationships
+    client: Mapped["Client"] = relationship("Client", back_populates="repairs_orders")
+    device: Mapped["Device"] = relationship("Device", back_populates="repairs_orders")
+    order_spare_parts: Mapped[List["OrderSparePart"]] = relationship("OrderSparePart", back_populates="repair_order")
+    order_services: Mapped[List["OrderService"]] = relationship("OrderService", back_populates="repair_order")
+    technician: Mapped["Technician"] = relationship("Technician", back_populates="repairs_orders")
 
 # =========================================================================
 # TABLE SPARE PARTS
@@ -123,16 +128,16 @@ class RepairOrder(Base):
 class SparePart(Base):
     __tablename__ = "spare_parts"
 
-    #Table Columns
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), nullable=False)
-    component_type = Column(String(50), nullable=True)
-    brand = Column(String(50), nullable=True) 
-    stock = Column(Integer, default=0)
-    price = Column(Float, nullable=True)
+    # Table Columns
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    component_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    brand: Mapped[Optional[str]] = mapped_column(String(50), nullable=True) 
+    stock: Mapped[int] = mapped_column(default=0)
+    price: Mapped[Optional[float]] = mapped_column(nullable=True)
 
-    #Relationships
-    order_spare_parts = relationship("OrderSparePart", back_populates="spare_part")
+    # Relationships
+    order_spare_parts: Mapped[List["OrderSparePart"]] = relationship("OrderSparePart", back_populates="spare_part")
 
 # =========================================================================
 # TABLE ORDER SPARE PARTS
@@ -141,17 +146,17 @@ class SparePart(Base):
 class OrderSparePart(Base):
     __tablename__ = "order_spare_parts"
 
-    #Table Columns
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    quantity = Column(Integer, nullable=True)
+    # Table Columns
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    quantity: Mapped[Optional[int]] = mapped_column(nullable=True)
 
-    #ForeingKeys
-    repair_order_id = Column(Integer, ForeignKey("repairs_orders.id"), nullable=False)
-    spare_part_id = Column(Integer, ForeignKey("spare_parts.id"), nullable=False)
+    # ForeignKeys
+    repair_order_id: Mapped[int] = mapped_column(ForeignKey("repairs_orders.id"), nullable=False)
+    spare_part_id: Mapped[int] = mapped_column(ForeignKey("spare_parts.id"), nullable=False)
 
-    #Relationships
-    repair_order = relationship("RepairOrder", back_populates="order_spare_parts")
-    spare_part = relationship("SparePart", back_populates="order_spare_parts")
+    # Relationships
+    repair_order: Mapped["RepairOrder"] = relationship("RepairOrder", back_populates="order_spare_parts")
+    spare_part: Mapped["SparePart"] = relationship("SparePart", back_populates="order_spare_parts")  # Corregido singular
 
 # =========================================================================
 # TABLE SERVICES TYPES
@@ -160,13 +165,13 @@ class OrderSparePart(Base):
 class ServiceType(Base):
     __tablename__ = "service_types"
 
-    #Table Columns
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    name = Column(String(100), nullable=False)
-    price = Column(Float, nullable=True)
+    # Table Columns
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    name: Mapped[Optional[str]] = mapped_column(String(100), nullable=False)
+    price: Mapped[Optional[float]] = mapped_column(nullable=True)
 
-    #Relationships
-    order_services = relationship("OrderService", back_populates="service_type")
+    # Relationships
+    order_services: Mapped[List["OrderService"]] = relationship("OrderService", back_populates="service_type")
 
 # =========================================================================
 # TABLE ORDER SERVICES
@@ -175,16 +180,16 @@ class ServiceType(Base):
 class OrderService(Base):
     __tablename__ = "order_services"
 
-    #Table Columns
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    # Table Columns
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
 
-    #ForeingKeys
-    repair_order_id = Column(Integer, ForeignKey("repairs_orders.id"), nullable=False)
-    service_type_id = Column(Integer, ForeignKey("service_types.id"), nullable=False)
+    # ForeignKeys
+    repair_order_id: Mapped[int] = mapped_column(ForeignKey("repairs_orders.id"), nullable=False)
+    service_type_id: Mapped[int] = mapped_column(ForeignKey("service_types.id"), nullable=False)
 
-    #Relationships
-    repair_order = relationship("RepairOrder", back_populates="order_services")
-    service_type = relationship("ServiceType", back_populates="order_services")
+    # Relationships
+    repair_order: Mapped["RepairOrder"] = relationship("RepairOrder", back_populates="order_services")
+    service_type: Mapped["ServiceType"] = relationship("ServiceType", back_populates="order_services")
 
 # =========================================================================
 # TABLE STORAGE
@@ -193,12 +198,12 @@ class OrderService(Base):
 class Storage(Base):
     __tablename__ = "storage"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    entry_date = Column(Date, nullable=False)
-    column = Column(String(3), nullable=False)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    entry_date: Mapped[datetime] = mapped_column(nullable=False)
+    column: Mapped[str] = mapped_column(String(3), nullable=False)
 
-    #ForeingKeys
-    device_id = Column(Integer, ForeignKey("devices.id"), nullable=False)
+    # ForeignKeys
+    device_id: Mapped[int] = mapped_column(ForeignKey("devices.id"), nullable=False)
 
-    #Relationships
-    device = relationship("Device", back_populates="storage")
+    # Relationships
+    device: Mapped["Device"] = relationship("Device", back_populates="storage")
