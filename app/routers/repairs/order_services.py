@@ -1,17 +1,22 @@
 from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from sqlalchemy import cast, String
+from sqlalchemy.exc import IntegrityError
 
 from app import (
     OrderService, OrderServiceCreate,
     OrderServiceResponse, OrderServiceUpdate,
-    crud_order_service, crud_service_type, get_db,
+    crud_order_service, crud_service_type, crud_repair_order, get_db,
+    User
 )
-from sqlalchemy import cast, String
-from app.api.deps import require_roles
+from app.utils import build_audit_change_details
+from app.services import log_action
+from app.api.deps import get_current_user, require_roles
 from app.core import LEVEL_ADVANCE, LEVEL_BASIC, LEVEL_MEDIUM
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/order_services", tags=["Order Services"])
+
 
 @router.post(
     "/",
@@ -20,22 +25,57 @@ router = APIRouter(prefix="/order_services", tags=["Order Services"])
     dependencies=[Depends(require_roles(LEVEL_MEDIUM))],
 )
 def create_order_service(
-    order_service_in: OrderServiceCreate, db: Session = Depends(get_db)
+    order_service_in: OrderServiceCreate, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
 ):
-    """Create a order service in the database."""
-    validation = crud_order_service.search_where_by_IDs(
+    """Create an order service in the database."""
+    # 1. Validar existencia de entidades referenciadas (FKs)
+    if not crud_repair_order.get_by_id(db, id=order_service_in.repair_order_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=[f"La orden de reparación #{order_service_in.repair_order_id} no existe"],
+        )
+
+    db_service_type = crud_service_type.get_by_id(db, id=order_service_in.service_type_id)
+    if not db_service_type:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=["El tipo de servicio especificado no existe"],
+        )
+
+    # 2. Validar duplicados en la misma orden
+    validation = crud_order_service.search_where_by_fields(
         db=db,
-        id_1=order_service_in.repair_order_id,
-        id_2=order_service_in.service_type_id,
-        field_1="repair_order_id",
-        field_2="service_type_id"
+        repair_order_id=order_service_in.repair_order_id,
+        service_type_id=order_service_in.service_type_id,
     )
     if validation:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, 
-            detail=f"No puedes añadir a la orden #{order_service_in.repair_order_id} el mismo servicio"
+            detail=[f"El servicio '{db_service_type.name}' ya se encuentra registrado en la orden #{order_service_in.repair_order_id}"]
         )
-    return crud_order_service.create(db, obj_in=order_service_in)
+    
+    try:
+        db_order_service = crud_order_service.create(db, obj_in=order_service_in)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=["Ocurrió un conflicto al asociar el servicio a la orden. Verifique los datos ingresados."]
+        )
+    
+    log_action(
+        db,
+        user_id=current_user.id,
+        action="CREATE",
+        entity="order_services",
+        entity_id=db_order_service.id,
+        details=f"Servicio '{db_service_type.name}' agregado a la orden #{db_order_service.repair_order_id}",
+    )
+
+    return db_order_service
+
 
 @router.get(
     "/",
@@ -49,14 +89,31 @@ def read_order_services(
     db: Session = Depends(get_db),
 ):
     """Retrieves a paginated list of order services or performs a real-time search by sending 'q'."""
-    if q and q.strip():
+    q = q.strip() if q else None
+    if q:
         return crud_order_service.search_ilike(
             db=db,
             query=q,
-            search_fields=[cast(OrderService.id, String)],
+            search_fields=[cast(OrderService.repair_order_id, String)],
             limit=limit,
         )
     return crud_order_service.get_multi(db, skip=skip, limit=limit)
+
+
+@router.get(
+    "/{order_service_id}", 
+    response_model=OrderServiceResponse, 
+    dependencies=[Depends(require_roles(LEVEL_BASIC))]
+)
+def read_order_service_by_id(order_service_id: int, db: Session = Depends(get_db)):
+    """Retrieves a single order service by ID."""
+    db_order_service = crud_order_service.get_by_id(db, id=order_service_id)
+    if not db_order_service:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail=["Servicio de orden no encontrado"]
+        )
+    return db_order_service
 
 
 @router.patch(
@@ -67,54 +124,105 @@ def read_order_services(
 def update_order_service(
     order_service_id: int,
     order_service_in: OrderServiceUpdate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
 ):
-    """Update a order services partially or completely."""
+    """Update an order service partially or completely."""
     db_order_service = crud_order_service.get_by_id(db, id=order_service_id)
     if not db_order_service:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Servicio de orden no encontrado",
+            detail=["Servicio de orden no encontrado"],
         )
-    changing_service = (
-        order_service_in.service_type_id
-        and order_service_in.service_type_id != db_order_service.service_type_id
-    )
 
-    if changing_service:
-        validation = crud_order_service.search_where_by_IDs(
+    update_data = order_service_in.model_dump(exclude_unset=True)
+    if not update_data:
+        return db_order_service
+
+    new_service_type_id = update_data.get("service_type_id")
+    if new_service_type_id and new_service_type_id != db_order_service.service_type_id:
+        db_service_type = crud_service_type.get_by_id(db, id=new_service_type_id)
+        if not db_service_type:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=["El tipo de servicio especificado no existe"],
+            )
+
+        validation = crud_order_service.search_where_by_fields(
             db=db,
-            id_1=db_order_service.repair_order_id,
-            id_2=order_service_in.service_type_id,
-            field_1="repair_order_id",
-            field_2="service_type_id",
+            repair_order_id=db_order_service.repair_order_id,
+            service_type_id=new_service_type_id,
         )
         if validation:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"No puedes añadir a la orden #{db_order_service.repair_order_id} el mismo servicio",
+                detail=[f"El servicio '{db_service_type.name}' ya se encuentra registrado en la orden #{db_order_service.repair_order_id}"],
             )
-    
-    return crud_order_service.update(
-        db, db_obj=db_order_service, obj_in=order_service_in
+
+    audit_details = build_audit_change_details(
+        db_obj=db_order_service,
+        update_data=update_data,
+        entity_name="Servicio de Orden",
     )
+
+    try:
+        crud_order_service.update(db, db_obj=db_order_service, obj_in=update_data)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=["Ocurrió un conflicto al actualizar el servicio de la orden. Verifique los datos ingresados."]
+        )
+
+    if audit_details:
+        log_action(
+            db,
+            user_id=current_user.id,
+            action="UPDATE",
+            entity="order_services",
+            entity_id=order_service_id,
+            details=audit_details,
+        )
+
+    return db_order_service
 
 
 @router.delete(
-    "/{order_service_id}", dependencies=[Depends(require_roles(LEVEL_ADVANCE))]
+    "/{order_service_id}", 
+    dependencies=[Depends(require_roles(LEVEL_ADVANCE))]
 )
-def delete_order_service(order_service_id: int, db: Session = Depends(get_db)):
-    db_order_service = crud_order_service.get_by_id(db, order_service_id)
+def delete_order_service(
+    order_service_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Deletes an order service by ID."""
+    db_order_service = crud_order_service.get_by_id(db, id=order_service_id)
     if not db_order_service:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Servicio de orden no encontrado",
+            detail=["Servicio de orden no encontrado"],
         )
     
-    db_service_type = crud_service_type.get_by_id(
-        db, db_order_service.service_type_id
-        )
-    service_type_name = db_service_type.name if db_service_type else "Desconocido"
+    db_service_type = crud_service_type.get_by_id(db, id=db_order_service.service_type_id)
+    service_type_name = db_service_type.name if db_service_type else f"ID {db_order_service.service_type_id}"
 
-    crud_order_service.delete(db, db_order_service)
+    try:
+        crud_order_service.delete(db, db_obj=db_order_service)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=["No se puede eliminar el servicio de la orden debido a dependencias asociadas."]
+        )
+
+    log_action(
+        db,
+        user_id=current_user.id,
+        action="DELETE",
+        entity="order_services",
+        entity_id=order_service_id,
+        details=f"Servicio '{service_type_name}' eliminado de la orden #{db_order_service.repair_order_id}",
+    )
+
     return {"message": f"Servicio '{service_type_name}' de la orden #{db_order_service.repair_order_id} eliminado correctamente"}

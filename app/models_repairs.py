@@ -167,7 +167,7 @@ class ServiceType(Base):
 
     # Table Columns
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    name: Mapped[Optional[str]] = mapped_column(String(100), nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
     price: Mapped[Optional[float]] = mapped_column(nullable=True)
 
     # Relationships
@@ -207,3 +207,4 @@ class Storage(Base):
 
     # Relationships
     device: Mapped["Device"] = relationship("Device", back_populates="storage")
+    
