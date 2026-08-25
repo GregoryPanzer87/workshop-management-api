@@ -198,17 +198,6 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 # SPECIALIST CLASS (INHERITANCE CRUDBase)
 # =========================================================================
 
-# --- CLIENT CRUD (SAFE DELETE) ---
-class ClientCRUD(CRUDBase[Client, ClientCreate, ClientUpdate]):
-    def delete(self, db: Session, db_obj: Client) :
-        """Attempt to delete a client safely"""      
-        if hasattr(db_obj, 'repairs_orders') and db_obj.repairs_orders:
-            raise ValueError("No se puede eliminar un cliente con historial de reparaciones.")
-            
-        db.delete(db_obj)
-        db.commit()
-        return db_obj
-
 # --- DEVICE CRUD (CHANGE OWNER) ---
 class DeviceCRUD(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
     def update_owner(self, db: Session, device_id: int, new_client_id: int) -> Device:
@@ -246,7 +235,6 @@ class EmployeeCRUD(CRUDBase[EmployeeDirectory, EmployeeDirectoryCreate, Employee
         db.commit()
         db.refresh(db_obj)
         return db_obj
-        return None
 
 
 # --- TECHNICIAN CRUD (JOIN) ---
@@ -292,7 +280,7 @@ class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
 # 3. READY-TO-USE INSTANCES FOR MAIN
 # =========================================================================
 
-crud_client = ClientCRUD(Client)
+crud_client = CRUDBase[Client, ClientCreate, ClientUpdate](Client)
 crud_device_type = CRUDBase[DeviceType, DeviceTypeCreate, DeviceTypeUpdate](DeviceType)
 crud_device_brand = CRUDBase[DeviceBrand, DeviceBrandCreate, DeviceBrandUpdate](DeviceBrand)
 crud_device = DeviceCRUD(Device)

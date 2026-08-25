@@ -13,8 +13,9 @@ def validate_unique_fields_by_create(
     for field, error_msg in unique_fields:
         if field in create_data:
             new_val = create_data[field]
-            if new_val:
-                existing = crud_repo.get_by_other(db, value=str(new_val), field=field)
+            new_val_str = str(new_val).strip() if new_val is not None else ""
+            if new_val_str:
+                existing = crud_repo.get_by_other(db, value=new_val_str, field=field)
                 if existing:
                     errors.append(error_msg)
     return errors
@@ -22,11 +23,11 @@ def validate_unique_fields_by_create(
 #----------------------------------------------------------------------------------------------
 
 def validate_unique_fields_by_update(
-        db: Session,
-        crud_repo: Any,
-        db_obj: Any,
-        update_data: dict,
-        unique_fields: List[Tuple[str, str]]
+    db: Session,
+    crud_repo: Any,
+    db_obj: Any,
+    update_data: dict,
+    unique_fields: List[Tuple[str, str]]
 ) -> List[str]:
     """Validates field uniqueness when updating an existing record."""
     errors = []
@@ -35,10 +36,14 @@ def validate_unique_fields_by_update(
             new_val = update_data[field]
             current_val = getattr(db_obj, field, None)
 
-            if new_val and new_val != current_val:
-                existing = crud_repo.get_by_other(db, value=str(new_val), field=field)
+            new_val_str = str(new_val).strip() if new_val is not None else ""
+            current_val_str = str(current_val).strip() if current_val is not None else ""
+
+            if new_val_str != "" and new_val_str != current_val_str:
+                existing = crud_repo.get_by_other(db, value=new_val_str, field=field)
                 if existing and existing.id != db_obj.id:
                     errors.append(error_msg)
+    return errors
 
 #----------------------------------------------------------------------------------------------
 
@@ -54,7 +59,6 @@ def validate_exists_by_create(
     errors = []
     for crud_repo, field_name, error_msg in existence_checks:
         
-        # Obtención segura del ID sin importar la estructura
         if isinstance(data, dict):
             fk_id = data.get(field_name)
         else:
@@ -87,7 +91,7 @@ def validate_exists_by_update(
 #----------------------------------------------------------------------------------------------
 
 def build_audit_change_details(
-    db_obj: getattr,
+    db_obj: Any,
     update_data: dict,
     entity_name: str,
     max_length: int = 250
