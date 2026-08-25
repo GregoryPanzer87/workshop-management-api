@@ -48,7 +48,7 @@ class DeviceBrand(Base):
 
     # Table Columns
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    name: Mapped[str] = mapped_column(String(50), nullable=False)
+    name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
 
     # Relationships
     devices: Mapped[List["Device"]] = relationship("Device", back_populates="device_brand")

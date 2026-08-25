@@ -109,7 +109,7 @@ def update_client(client_id: int, client_in: ClientUpdate, db: Session = Depends
         ("email", "El correo electrónico ya está vinculado a otro cliente"),
     ]
 
-    errors = validate_unique_fields_by_update(
+    errors_409 = validate_unique_fields_by_update(
         db, 
         crud_repo=crud_client, 
         db_obj=db_client, 
@@ -117,10 +117,10 @@ def update_client(client_id: int, client_in: ClientUpdate, db: Session = Depends
         unique_fields=unique_fields
     )
 
-    if errors:
+    if errors_409:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, 
-            detail=errors
+            detail=errors_409
         )
 
     audit_details = build_audit_change_details(

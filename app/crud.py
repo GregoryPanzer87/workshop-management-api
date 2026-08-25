@@ -103,10 +103,14 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     #---------------------------------------------------------------------------------------
 
-    def create(self, db: Session, obj_in: CreateSchemaType) -> ModelType:
-        """Create a new record using Pydantic v2 (model_dump)"""
-        obj_in_data = obj_in.model_dump()
-        db_obj = self.model(**obj_in_data)
+    def create(self, db: Session, *, obj_in: Union[CreateSchemaType, Dict[str, Any]]) -> ModelType:
+        """Create a new record using Pydantic v2 (model_dump) or a dictionary."""
+        if isinstance(obj_in, dict):
+            create_data = obj_in
+        else:
+            create_data = obj_in.model_dump()
+
+        db_obj = self.model(**create_data)
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)
