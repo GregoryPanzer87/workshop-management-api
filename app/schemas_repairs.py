@@ -193,7 +193,7 @@ class RepairOrderUpdate(BaseModel):
 class SparePartBase(BaseModel):
     name: str
     component_type: str
-    brand: EmptyStrToNone = "Generico"
+    brand: EmptyStrToNone = None
     stock: EmptyIntToNone = 0
     price: EmptyFloatToNone = None
 
