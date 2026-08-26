@@ -113,7 +113,7 @@ def read_devices(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=["El cliente especificado no existe"]
             )
-        return crud_device.get_other_id(db=db, id=client_id, field="client_id", options=DEVICE_LOAD_OPTIONS, skip=skip, limit=limit)
+        return crud_device.list_get_by_other(db=db, value=client_id, field="client_id", options=DEVICE_LOAD_OPTIONS, skip=skip, limit=limit)
 
     return crud_device.get_multi(db, skip=skip, limit=limit, options=DEVICE_LOAD_OPTIONS)
 

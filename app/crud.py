@@ -69,7 +69,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     #---------------------------------------------------------------------------------------
     
-    def get_by_other(self, db: Session, value: str, field: str, options: Optional[Sequence[Any]] = None) -> Optional[ModelType]:
+    def get_by_other(self, db: Session, value: Any, field: str, options: Optional[Sequence[Any]] = None) -> Optional[ModelType]:
         """Get a record by other values"""
         column = getattr(self.model, field)
         stmt = select(self.model).where(column == value)
@@ -92,9 +92,9 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     #---------------------------------------------------------------------------------------
     
-    def get_other_id(self, db: Session, id: int, field: str, options: Optional[Sequence[Any]] = None, skip: int = 0, limit: int = 20) -> List[ModelType]:
+    def list_get_by_other(self, db: Session, value: int, field: Any, options: Optional[Sequence[Any]] = None, skip: int = 0, limit: int = 20) -> List[ModelType]:
         column = getattr(self.model, field)
-        stmt = select(self.model).where(column == id).offset(skip).limit(limit)
+        stmt = select(self.model).where(column == value).offset(skip).limit(limit)
 
         if options:
             stmt = stmt.options(*options)

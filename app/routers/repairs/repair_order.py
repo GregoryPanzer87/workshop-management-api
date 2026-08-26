@@ -51,7 +51,7 @@ def read_repair_orders_by_client(
     db: Session = Depends(get_db)
 ):
     """Retrieves a paginated list of repair orders for a specific client."""
-    orders = crud_repair_order.get_other_id(db=db, id=client_id, field="client_id", skip=skip, limit=limit)
+    orders = crud_repair_order.list_get_by_other(db=db, value=client_id, field="client_id", skip=skip, limit=limit)
     return orders
 
 @router.get("/device/{device_id}", response_model=List[RepairOrderResponse], dependencies=[Depends(require_roles(LEVEL_BASIC))])
@@ -62,7 +62,7 @@ def read_repair_orders_by_device(
     db: Session = Depends(get_db)
 ):
     """Retrieves a paginated list of repair orders for a specific device."""
-    orders = crud_repair_order.get_other_id(db=db, id=device_id, field="device_id", skip=skip, limit=limit)
+    orders = crud_repair_order.list_get_by_other(db=db, value=device_id, field="device_id", skip=skip, limit=limit)
     return orders
 
 @router.patch("/{repair_order_id}", response_model=RepairOrderResponse, dependencies=[Depends(require_roles(LEVEL_BASIC))])

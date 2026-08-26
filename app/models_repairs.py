@@ -83,10 +83,11 @@ class Technician(Base):
 
     # Table Columns
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
     commission: Mapped[Optional[int]] = mapped_column(nullable=True)
 
     # ForeignKeys
-    employee_id: Mapped[Optional[int]] = mapped_column(ForeignKey("employee_directory.id"), nullable=True)
+    employee_id: Mapped[Optional[int]] = mapped_column(ForeignKey("employee_directory.id"), unique=True, nullable=True)
     is_active: Mapped[bool] = mapped_column(default=True)
 
     # Relationships
@@ -207,4 +208,3 @@ class Storage(Base):
 
     # Relationships
     device: Mapped["Device"] = relationship("Device", back_populates="storage")
-    

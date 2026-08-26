@@ -43,8 +43,8 @@ def add_device_to_storage(
             detail=["Este equipo no existe."],
         )
 
-    existing_device = crud_storage.get_other_id(
-        db, id=storage_in.device_id, field="device_id"
+    existing_device = crud_storage.get_by_other(
+        db, value=storage_in.device_id, field="device_id"
     )
     if existing_device:
         raise HTTPException(
@@ -99,8 +99,8 @@ def read_storage_entries(
 @router.get("/device/{device_id}", response_model=StorageResponse, dependencies=[Depends(require_roles(LEVEL_BASIC))])
 def read_storage_by_device_id(device_id: int, db: Session = Depends(get_db)):
     """Get storage record using the internal Device ID."""
-    db_storage = crud_storage.get_other_id(
-        db, id=device_id, field="device_id",
+    db_storage = crud_storage.get_by_other(
+        db, value=device_id, field="device_id",
         options=STORAGE_LOAD_OPTIONS,
     )
     if not db_storage:
@@ -153,7 +153,7 @@ def update_storage_entry(
                 detail=["El equipo no existe."]
             )
 
-        existing_device = crud_storage.get_other_id(db, id=storage_in.device_id, field="device_id")
+        existing_device = crud_storage.get_by_other(db, value=storage_in.device_id, field="device_id")
         if existing_device and existing_device.id != storage_id:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
