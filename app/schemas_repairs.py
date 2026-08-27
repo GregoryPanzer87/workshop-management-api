@@ -108,7 +108,7 @@ class DeviceResponse(ConfigResponse, DeviceBase):
     device_type_id: DeviceTypeResponse
     device_brand_id: DeviceBrandResponse
 
-class DeviceMinResponse(ConfigResponse, DeviceBase):
+class DeviceMinResponse(ConfigResponse, DeviceBaseResponse):
     device_type_id: DeviceTypeResponse
     device_brand_id: DeviceBrandResponse
 
@@ -124,6 +124,7 @@ class DeviceUpdate(BaseModel):
 # =========================================================================
 
 class TechnicianBase(BaseModel):
+    name: EmptyStrToNone = None
     commission: EmptyIntToNone = None
     is_active: bool = True
 
@@ -134,6 +135,10 @@ class TechnicianCreate(TechnicianBase, ConfigCreate):
 
 class TechnicianResponse(ConfigResponse, TechnicianBase):
     id: int
+
+class TechnicianMinResponse(ConfigResponse, BaseModel):
+    id: int
+    name: str
 
 class TechnicianUpdate(BaseModel):
     commission: EmptyIntToNone = None
@@ -167,12 +172,14 @@ class RepairOrderCreate(RepairOrderBase, ConfigCreate):
 
 class RepairOrderResponse(ConfigResponse, RepairOrderBase):
     id: int
-    client: Optional[OrderClientResponse] = None
-    device: Optional[DeviceMinResponse] = None
+    client_id: Optional[OrderClientResponse] = None
+    device_id: Optional[DeviceMinResponse] = None
+    technician_id: Optional[TechnicianMinResponse] = None
 
 class RepairOrderDetailResponse(ConfigResponse, RepairOrderResponse):
-    client: ClientResponse
-    device: DeviceResponse
+    client_id: ClientResponse
+    device_id: DeviceResponse
+    technician_id: TechnicianResponse
 
 class RepairOrderUpdate(BaseModel):
     entry_date: EmptyDateToNone = None

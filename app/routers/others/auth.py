@@ -91,7 +91,7 @@ def update_user(user_id: int,user_in: UserUpdate,db: Session = Depends(get_db), 
     errors1 = []
     errors2 = []
     is_self = (current_user.id == user_id)
-    is_admin = (current_user.role >= LEVEL_ADVANCE)
+    is_admin = (current_user.role in LEVEL_ADVANCE)
     is_employee = (db_user.employee_id is not None)
 
     if not is_self:
