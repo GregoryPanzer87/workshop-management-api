@@ -42,21 +42,27 @@ def create_client(client_in: ClientCreate, db: Session = Depends(get_db), curren
 
     try:
         db_client = crud_client.create(db, obj_in=create_data)
+
+        log_action(
+            db,
+            user_id=current_user.id,
+            action="CREATE",
+            entity="clients",
+            entity_id=db_client.id,
+            details=f"Cliente registrado: {db_client.name} (ID: {db_client.id})",
+        )
+
+        db.commit()
+        db.refresh(db_client)
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=["Ocurrió un conflicto al registrar el cliente. Verifique los datos ingresados."]
         )
-    
-    log_action(
-        db,
-        user_id=current_user.id,
-        action="CREATE",
-        entity="clients",
-        entity_id=db_client.id,
-        details=f"Cliente registrado: {db_client.name} (ID: {db_client.id})",
-    )
+    except Exception as e:
+        db.rollback()
+        raise e
         
     return db_client
 
@@ -131,22 +137,28 @@ def update_client(client_id: int, client_in: ClientUpdate, db: Session = Depends
 
     try: 
         db_client = crud_client.update(db, db_obj=db_client, obj_in=update_data)
+
+        if audit_details:
+            log_action(
+                db,
+                user_id=current_user.id,
+                action="UPDATE",
+                entity="clients",
+                entity_id=client_id,
+                details=audit_details
+            )
+
+        db.commit()
+        db.refresh(db_client)
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=["Ocurrió uno o varios conflictos al registrar el cliente"]
         )
-
-    if audit_details:
-        log_action(
-            db,
-            user_id=current_user.id,
-            action="UPDATE",
-            entity="clients",
-            entity_id=client_id,
-            details=audit_details
-        )
+    except Exception as e:
+        db.rollback()
+        raise e
 
     return db_client
 
@@ -162,20 +174,25 @@ def delete_client(client_id: int, db: Session = Depends(get_db), current_user: U
         
     try:
         crud_client.delete(db, db_obj=db_client)
+
+        log_action(
+                db,
+                user_id=current_user.id,
+                action="DELETE",
+                entity="clients",
+                entity_id=client_id,
+                details=f"Cliente eliminado: {db_client.name} (ID: {db_client.id})",
+            )
+
+        db.commit()
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=["No se puede eliminar el cliente porque tiene equipos u otros registros asociados."]
         )
-
-    log_action(
-        db,
-        user_id=current_user.id,
-        action="DELETE",
-        entity="clients",
-        entity_id=client_id,
-        details=f"Cliente eliminado: {db_client.name} (ID: {db_client.id})",
-    )
+    except Exception as e:
+        db.rollback()
+        raise e
     
     return {"message": f"Cliente '{db_client.name}' eliminado correctamente"}
