@@ -112,8 +112,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         db_obj = self.model(**create_data)
         db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
+        db.flush()
         return db_obj
 
     #---------------------------------------------------------------------------------------
@@ -187,14 +186,13 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             setattr(db_obj, field, value)
 
         db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
+        db.flush()
 
         return db_obj
 
     def delete(self, db: Session, db_obj:  ModelType) -> Optional[ModelType]:   
         db.delete(db_obj)
-        db.commit()
+        db.flush()
 
         return db_obj
         
@@ -208,8 +206,7 @@ class DeviceCRUD(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         """Assign id_client to a new client without changes to the history"""
         db_device = self.get_by_id(db, id=device_id)
         db_device.client_id = new_client_id
-        db.commit()
-        db.refresh(db_device)
+        db.flush()
         return db_device
 
 # --- REPAIR ORDER CRUD (SAFE DELETE) ---
@@ -224,7 +221,7 @@ class RepairOrderCRUD(CRUDBase[RepairOrder, RepairOrderCreate, RepairOrderUpdate
             raise ValueError("No se puede eliminar una orden con repuestos o servicios realizados.")
                 
         db.delete(db_obj)
-        db.commit()
+        db.flush()
         return db_obj
 
 # --- EMPLOYEE CRUD (LOGIC DELETE) ---
@@ -232,8 +229,7 @@ class EmployeeCRUD(CRUDBase[EmployeeDirectory, EmployeeDirectoryCreate, Employee
     def delete(self, db: Session, db_obj: EmployeeDirectory) -> EmployeeDirectory:
         """Deactivate an employee (is_active = False) instead of deleting it"""
         db_obj.is_active = False
-        db.commit()
-        db.refresh(db_obj)
+        db.flush()
         return db_obj
 
 
@@ -251,8 +247,7 @@ class TechnicianCRUD(CRUDBase[Technician, TechnicianCreate, TechnicianUpdate]):
     def delete(self, db: Session, db_obj: Technician) -> Technician:
         """Deactivate an technician (is_active = False) instead of deleting it"""
         db_obj.is_active = False
-        db.commit()
-        db.refresh(db_obj)
+        db.flush()
         return db_obj
 
 # --- USER CRUD ---
@@ -272,8 +267,7 @@ class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
             client_id=cli_id
         )
         db.add(db_user)
-        db.commit()
-        db.refresh(db_user)
+        db.flush()
         return db_user
 
 # =========================================================================
