@@ -33,8 +33,12 @@ INTEGRITY_ERROR = ["Ocurrió un conflicto al crear la orden de reparación. Veri
 def create_repair_order(repair_order_in: RepairOrderCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Create a new repair order in the database."""
     create_data = repair_order_in.model_dump(exclude_unset=True)
-    if current_user.role not in LEVEL_ADVANCE:
-            create_data.pop('legacy_order_id', None)
+
+    if current_user.role not in LEVEL_ADVANCE and 'legacy_order_id' in create_data:
+        raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=["No tienes permisos para crear una orden de reparación antigua"]
+            )
 
     existence_checks = [
         (crud_client, "client_id", "El cliente especificado no existe"),
@@ -139,28 +143,42 @@ def update_repair_order(repair_order_id: int, repair_order_in: RepairOrderUpdate
     if not update_data:
         return db_repair_order
 
+    errors_403 = []
+
     if current_user.role not in LEVEL_ADVANCE:
-        update_data.pop('legacy_order_id', None)
-    if current_user.role not in LEVEL_MEDIUM:
-        update_data.pop('client_id', None)
-        update_data.pop('device_id', None)
-        update_data.pop('technician_id', None)
-    else:
-        existence_checks = [
-            (crud_client, "client_id", "El cliente especificado no existe"),
-            (crud_device, "device_id", "El equipo especificado no existe"),
-            (crud_technician, "technician_id", "El tecnico especificado no existe"),
-        ]
-
-        errors_404 = validate_exists_by_update(db, update_data, existence_checks)
-        if errors_404:
+        if db_repair_order.legacy_order_id:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=errors_404
+                status_code=status.HTTP_403_FORBIDDEN, 
+                detail=["No tienes permisos para modificar esta orden de reparación"]
             )
+        if 'legacy_order_id' in update_data:
+            errors_403.append("asignar un número de orden antigua")
+    if current_user.role not in LEVEL_MEDIUM:
+        if 'client_id' in update_data:
+            errors_403.append("cambiar el cliente")
+        if 'device_id' in update_data:
+            errors_403.append("cambiar el equipo")
+        if 'technician_id' in update_data:
+            errors_403.append("cambiar el técnico")
 
-    if not update_data:
-            return db_repair_order
+    if errors_403:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail=[f"No tienes permisos para: {', '.join(errors_403)}"]
+            )
+    
+    existence_checks = [
+        (crud_client, "client_id", "El cliente especificado no existe"),
+        (crud_device, "device_id", "El equipo especificado no existe"),
+        (crud_technician, "technician_id", "El técnico especificado no existe"),
+    ]
+
+    errors_404 = validate_exists_by_update(db, update_data, existence_checks)
+    if errors_404:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=errors_404
+        )
 
     audit_details = build_audit_change_details(
         db_obj=db_repair_order,
@@ -189,7 +207,7 @@ def update_repair_order(repair_order_id: int, repair_order_in: RepairOrderUpdate
     
     return crud_repair_order.get_by_id(db, id=repair_order_id, options=REPAIR_ORDER_LOAD_OPTIONS)
 
-@router.delete("/{repair_order_id}", dependencies=[Depends(require_roles(LEVEL_ADVANCE))])
+@router.delete("/{repair_order_id}", status_code=status.HTTP_200_OK, dependencies=[Depends(require_roles(LEVEL_ADVANCE))])
 def delete_repair_order(repair_order_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     db_repair_order = crud_repair_order.get_by_id(db, id=repair_order_id, options=REPAIR_ORDER_LOAD_OPTIONS)
     if not db_repair_order:
@@ -204,7 +222,7 @@ def delete_repair_order(repair_order_id: int, db: Session = Depends(get_db), cur
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=["No se puede eliminar la orden de reparación porque tiene equipos u otros registros asociados."]
+            detail=["No se puede eliminar la orden de reparación porque existen registros o detalles asociados a ella."]
         )
 
     log_action(
@@ -213,7 +231,7 @@ def delete_repair_order(repair_order_id: int, db: Session = Depends(get_db), cur
         action="DELETE",
         entity="repair_orders",
         entity_id=repair_order_id,
-        details=f"Orden de reparación eliminada: (ID de equipo: {db_repair_order.device.id}) (ID de cliente: {db_repair_order.client.id})",
+        details=f"Orden de reparación eliminada: #{repair_order_id} (ID de equipo: {db_repair_order.device_id}) (ID de cliente: {db_repair_order.client_id})",
     )
 
     return {"message": f"Orden de reparación #{repair_order_id} eliminada correctamente"}

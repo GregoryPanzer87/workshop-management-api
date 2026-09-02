@@ -1,8 +1,19 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from datetime import date, datetime
 from enum import Enum
 from app.config import EmptyEmailToNone, EmptyStrToNone, EmptyIntToNone, EmptyBoolToNone, EmptyDateToNone
+
+class ConfigCreate():
+    model_config = ConfigDict(
+        str_strip_whitespace=True
+    )
+
+class ConfigResponse():
+    model_config = ConfigDict(
+        from_attributes=True,
+        str_strip_whitespace=True
+    )
 
 # =========================================================================
 #---------------------------------EMPLOYEE DIRECTORY-----------------------
@@ -21,19 +32,17 @@ class EmployeeDirectoryBase(BaseModel):
     national_id_doc: EmptyStrToNone = None
     profile_photo: EmptyStrToNone = None
 
-class EmployeeDirectoryCreate(EmployeeDirectoryBase):
+class EmployeeDirectoryCreate(EmployeeDirectoryBase, ConfigCreate):
     pass
 
 class UserCredentials(BaseModel):
     username: str
     password: str
 
-class EmployeeDirectoryResponse(EmployeeDirectoryBase):
+class EmployeeDirectoryResponse(EmployeeDirectoryBase, ConfigResponse):
     id: int
     employee_code: str
-    initial_credentials: Optional[UserCredentials]
-
-    model_config = {"from_attributes": True, "str_strip_whitespace": True}
+    initial_credentials: Optional[UserCredentials] = None
 
 class EmployeeDirectoryUpdate(BaseModel):
     full_name: EmptyStrToNone = None
@@ -57,6 +66,7 @@ class UserRole(str, Enum):
     DIRECTOR = "Director"
     OPERATOR = "Operator"
     TECHNICIAN = "Technician"
+    BASE = "Base"
     CLIENT = "Client"
 
 class UserBase(BaseModel):
@@ -68,13 +78,11 @@ class UserBase(BaseModel):
     employee_id: EmptyIntToNone = None
     client_id: EmptyIntToNone = None
 
-class UserCreate(UserBase):
+class UserCreate(UserBase, ConfigCreate):
     password: str
 
-class UserResponse(UserBase):
+class UserResponse(UserBase, ConfigResponse):
     id: int
-
-    model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class UserUpdate(BaseModel):
     username: EmptyStrToNone = None
@@ -96,13 +104,11 @@ class ExpenseBase(BaseModel):
     expense_date: date
     category: str
 
-class ExpenseCreate(ExpenseBase):
+class ExpenseCreate(ExpenseBase, ConfigCreate):
     pass
 
-class ExpenseResponse(ExpenseBase):
+class ExpenseResponse(ExpenseBase, ConfigResponse):
     id: int
-
-    model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class ExpenseUpdate(BaseModel):
     description: EmptyStrToNone = None
@@ -126,13 +132,11 @@ class AttendanceBase(BaseModel):
 
     employee_id: int
 
-class AttendanceCreate(AttendanceBase):
+class AttendanceCreate(AttendanceBase, ConfigCreate):
     pass
 
-class AttendanceResponse(AttendanceBase):
+class AttendanceResponse(AttendanceBase, ConfigResponse):
     id: int
-
-    model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class AttendanceUpdate(BaseModel):
     date_now: EmptyDateToNone = None
@@ -152,14 +156,12 @@ class AuditLogBase(BaseModel):
 
     user_id: int
 
-class AuditLogCreate(AuditLogBase):
+class AuditLogCreate(AuditLogBase, ConfigCreate):
     pass
 
-class AuditLogResponse(AuditLogBase):
+class AuditLogResponse(AuditLogBase, ConfigResponse):
     id: int
     created_at: datetime
-
-    model_config = {"from_attributes": True, "str_strip_whitespace": True}
 
 class AuditLogUpdate(BaseModel):
     pass

@@ -84,8 +84,9 @@ def read_technicians(
     db: Session = Depends(get_db)
 ):
     """Retrieves a paginated list of technicians or performs a real-time search by sending 'q'."""
-    if q and q.strip():
-        search_query = q.strip()
+    q = q.strip() if q else None
+    if q:
+        search_query = q
         tech_by_code = crud_technician.get_by_code(db, employee_code=search_query)
         if tech_by_code:
             return [tech_by_code]
@@ -190,7 +191,7 @@ def update_technician(technician_id: int,technician_in: TechnicianUpdate,db: Ses
         
     return crud_technician.get_by_id(db, id=technician_id)
 
-@router.delete("/{technician_id}", dependencies=[Depends(require_roles(LEVEL_ADVANCE))])
+@router.delete("/{technician_id}", status_code=status.HTTP_200_OK, dependencies=[Depends(require_roles(LEVEL_ADVANCE))])
 def delete_technician(technician_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Soft delete / Deactivate a technician."""
     db_technician = crud_technician.get_by_id(db, technician_id)
@@ -215,7 +216,7 @@ def delete_technician(technician_id: int, db: Session = Depends(get_db), current
         action="DELETE",
         entity="technicians",
         entity_id=technician_id,
-        details=f"Técnico deactivate: {db_technician.name} (ID: {db_technician.id})",
+        details=f"Técnico desactivado: {db_technician.name} (ID: {db_technician.id})",
     )
 
-    return {"message": f"Técnico {db_technician.name} #{technician_id} desactivado correctamente"}
+    return {"message": f"Técnico {db_technician.name} #(ID: {db_technician.id}) desactivado correctamente"}

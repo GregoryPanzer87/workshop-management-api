@@ -156,6 +156,7 @@ def update_device_brand(
 
 @router.delete(
     "/{device_brand_id}", 
+    status_code=status.HTTP_200_OK,
     dependencies=[Depends(require_roles(LEVEL_ADVANCE))]
 )
 def delete_device_brand(

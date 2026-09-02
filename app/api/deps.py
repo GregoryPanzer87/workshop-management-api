@@ -22,14 +22,14 @@ def get_current_user(
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
+        user_id = payload.get("sub")
         if user_id is None:
             raise credentials_exception
-            
-    except (jwt.PyJWTError, ValidationError):
+        user_id_int = int(user_id)
+    except (jwt.PyJWTError, ValidationError, ValueError):
         raise credentials_exception
 
-    user = crud_user.get_by_id(db, id=int(user_id))
+    user = crud_user.get_by_id(db, id=user_id_int)
     if not user:
         raise credentials_exception
     if not user.is_active:

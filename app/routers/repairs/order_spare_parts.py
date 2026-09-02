@@ -189,6 +189,7 @@ def update_order_spare_part(
 
 @router.delete(
     "/{order_spare_part_id}", 
+    status_code=status.HTTP_200_OK,
     dependencies=[Depends(require_roles(LEVEL_ADVANCE))]
 )
 def delete_order_spare_part(

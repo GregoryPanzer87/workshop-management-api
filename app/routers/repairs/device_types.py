@@ -13,6 +13,7 @@ from app.utils import (
     validate_unique_fields_by_create,
     validate_unique_fields_by_update, 
     build_audit_change_details,
+    generate_device_type_prefix
 )
 from app.services import log_action
 from app.core import LEVEL_ADVANCE, LEVEL_BASIC, LEVEL_MEDIUM
@@ -51,6 +52,9 @@ def create_device_type(
             status_code=status.HTTP_409_CONFLICT, 
             detail=errors_409
         )
+
+    prefix = generate_device_type_prefix(type_name=create_data.get("name"), db=db)
+    create_data["prefix"] = prefix
 
     try:
         db_device_type = crud_device_type.create(db, obj_in=create_data)
@@ -184,6 +188,7 @@ def update_device_type(
 
 @router.delete(
     "/{device_type_id}", 
+    status_code=status.HTTP_200_OK,
     dependencies=[Depends(require_roles(LEVEL_ADVANCE))]
 )
 def delete_device_type(

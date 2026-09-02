@@ -150,7 +150,7 @@ def update_client(client_id: int, client_in: ClientUpdate, db: Session = Depends
 
     return db_client
 
-@router.delete("/{client_id}", dependencies=[Depends(require_roles(LEVEL_ADVANCE))])
+@router.delete("/{client_id}", status_code=status.HTTP_200_OK, dependencies=[Depends(require_roles(LEVEL_ADVANCE))])
 def delete_client(client_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Deletes a client by ID."""
     db_client = crud_client.get_by_id(db, client_id)

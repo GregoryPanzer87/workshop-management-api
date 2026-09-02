@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List, Optional, TYPE_CHECKING
-from sqlalchemy import String, ForeignKey
+from sqlalchemy import String, Date, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app import Base
 
@@ -59,8 +59,8 @@ class Device(Base):
     # Table Columns
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     model: Mapped[str] = mapped_column(String(30), nullable=False)
-    serial_number: Mapped[Optional[str]] = mapped_column(String(30), unique=True, nullable=True)
-    description: Mapped[str] = mapped_column(String(200), nullable=False)
+    serial_number: Mapped[Optional[str]] = mapped_column(String(50), unique=True, nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
 
     # ForeignKeys corregidas (device_types y device_brands en singular)
     client_id: Mapped[int] = mapped_column(ForeignKey("clients.id"), nullable=False)
@@ -103,10 +103,10 @@ class RepairOrder(Base):
 
     # Table Columns
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    entry_date: Mapped[datetime] = mapped_column(nullable=False)
+    entry_date: Mapped[datetime] = mapped_column(Date, nullable=False)
     is_warranty: Mapped[bool] = mapped_column(default=False)
     status: Mapped[Optional[str]] = mapped_column(String(30), nullable=False)
-    exit_date: Mapped[Optional[datetime]] = mapped_column(nullable=True)
+    exit_date: Mapped[Optional[datetime]] = mapped_column(Date,nullable=True)
     agreed_price: Mapped[Optional[float]] = mapped_column(nullable=True)
     legacy_order_id: Mapped[Optional[int]] = mapped_column(nullable=True)
 
@@ -133,7 +133,8 @@ class SparePart(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     component_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    brand: Mapped[Optional[str]] = mapped_column(String(50), nullable=True) 
+    brand: Mapped[Optional[str]] = mapped_column(String(100), nullable=True) 
+    supplier: Mapped[Optional[str]] = mapped_column(String(100), nullable=True) 
     stock: Mapped[int] = mapped_column(default=0)
     price: Mapped[Optional[float]] = mapped_column(nullable=True)
 
@@ -200,7 +201,7 @@ class Storage(Base):
     __tablename__ = "storage"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    entry_date: Mapped[datetime] = mapped_column(nullable=False)
+    entry_date: Mapped[datetime] = mapped_column(Date, nullable=False)
     column: Mapped[str] = mapped_column(String(3), nullable=False)
 
     # ForeignKeys

@@ -189,6 +189,7 @@ def update_order_service(
 
 @router.delete(
     "/{order_service_id}", 
+    status_code=status.HTTP_200_OK,
     dependencies=[Depends(require_roles(LEVEL_ADVANCE))]
 )
 def delete_order_service(

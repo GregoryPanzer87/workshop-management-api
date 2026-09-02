@@ -188,7 +188,7 @@ def update_storage_entry(
     return crud_storage.get_by_id(db, id=storage_id, options=STORAGE_LOAD_OPTIONS)
 
 
-@router.delete("/{storage_id}", dependencies=[Depends(require_roles(LEVEL_ADVANCE))])
+@router.delete("/{storage_id}", status_code=status.HTTP_200_OK, dependencies=[Depends(require_roles(LEVEL_ADVANCE))])
 def delete_storage_entry(
     storage_id: int, 
     db: Session = Depends(get_db),

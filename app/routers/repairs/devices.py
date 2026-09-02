@@ -6,7 +6,8 @@ from sqlalchemy.exc import IntegrityError
 from app import (
     DeviceType, DeviceBrand,
     Device, DeviceCreate, 
-    DeviceResponse, DeviceUpdate, User,
+    DeviceResponse, DeviceUpdate, 
+    Client, User,
     crud_device_type, crud_device_brand,
     crud_device, crud_client, get_db
 )
@@ -33,7 +34,7 @@ def create_device(
     current_user: User = Depends(get_current_user)
 ):
     """Creates a new device in the database and links it to a client."""
-    create_data = device_in.model_dump()
+    create_data = device_in.model_dump(exclude_unset=True)
 
     existence_checks = [
         (crud_client, "client_id", "El cliente especificado no existe"),
@@ -41,27 +42,25 @@ def create_device(
         (crud_device_brand, "device_brand_id", "La marca de equipo especificada no existe"),
     ]
 
-    errors = validate_exists_by_create(db, create_data, existence_checks)
-    if errors:
+    errors_404 = validate_exists_by_create(db, create_data, existence_checks)
+    if errors_404:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=errors
+            detail=errors_404
         )
     
     serial_in = create_data.get("serial_number")
     if serial_in and serial_in.strip():
-        clean_serial = serial_in.strip()
-        create_data["serial_number"] = clean_serial
-        if crud_device.get_by_other(db, value=clean_serial, field="serial_number"):
+        if crud_device.get_by_other(db, value=serial_in, field="serial_number"):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=["Ya existe un equipo registrado con este Serial"]
             )
     else:
-        dev_type = crud_device_type.get_by_id(db, create_data["device_type_id"])
-        prefix = dev_type.prefix if (dev_type and dev_type.prefix) else "INN"
+        dev_type = crud_device_type.get_by_id(db, id=create_data["device_type_id"])
+        prefix = dev_type.prefix if (dev_type and getattr(dev_type, "prefix", None)) else "INN"
         create_data["serial_number"] = generate_custom_serial(db=db, prefix=prefix)
-    
+
     try:
         db_device = crud_device.create(db, obj_in=create_data)
     except IntegrityError:
@@ -99,10 +98,12 @@ def read_devices(
             search_fields=[
                 DeviceType.name, 
                 DeviceBrand.name, 
+                Client.name,
+                Client.national_id,
                 Device.model, 
                 Device.serial_number
             ], 
-            joins=[DeviceType, DeviceBrand],
+            joins=[Client, DeviceType, DeviceBrand],
             options=DEVICE_LOAD_OPTIONS,
             limit=limit
         )
@@ -206,6 +207,36 @@ def update_device(
         
     return crud_device.get_by_id(db, device_id, options=DEVICE_LOAD_OPTIONS)
 
+@router.delete("/{device_id}", status_code=status.HTTP_200_OK, dependencies=[Depends(require_roles(LEVEL_MEDIUM))])
+def delete_device(device_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Deletes a device by ID."""
+    db_device = crud_device.get_by_id(db, device_id, options=DEVICE_LOAD_OPTIONS)
+    if not db_device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail=["Equipo no encontrado"]
+        )
+        
+    try:
+        crud_device.delete(db, db_obj=db_device)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=["No se puede eliminar el equipo porque tiene ordenes asociadas."]
+        )
+
+    log_action(
+        db,
+        user_id=current_user.id,
+        action="DELETE",
+        entity="devices",
+        entity_id=device_id,
+        details=f"Equipo eliminado: (ID: {db_device.id})",
+    )
+    
+    return {"message": f"Equipo '{db_device.device_type.name}-{db_device.model}-{db_device.serial_number}' eliminado correctamente"}
+
 @router.patch("/{device_id}/transfer/{new_client_id}", response_model=DeviceResponse, dependencies=[Depends(require_roles(LEVEL_MEDIUM))])
 def change_owner(
     device_id: int, 
@@ -237,7 +268,7 @@ def change_owner(
     old_client_str = f"{db_device.client.name} (ID: {db_device.client.id})" if db_device.client else "Desconocido"
     new_client_str = f"{new_client.name} (ID: {new_client.id})"
 
-    db_device = crud_device.update_owner(db, device_id=device_id, client_id=new_client_id)
+    db_device = crud_device.update_owner(db, device_id=device_id, new_client_id=new_client_id)
 
     log_action(
         db,
@@ -245,7 +276,7 @@ def change_owner(
         action="UPDATE",
         entity="devices",
         entity_id=device_id,
-        details=f"Transferencia de dueño del equipo #{device_id}: De {old_client_str} a {new_client_str}",
+        details=f"Transferencia de dueño del equipo (iD: {device_id}): De {old_client_str} a {new_client_str}",
     )
 
     return crud_device.get_by_id(db, device_id, options=DEVICE_LOAD_OPTIONS)

@@ -12,6 +12,7 @@ class ConfigCreate():
 class ConfigResponse():
     model_config = ConfigDict(
         from_attributes=True,
+        str_strip_whitespace=True
     )
     
 # =========================================================================
@@ -35,7 +36,7 @@ class ClientMinResponse(ConfigResponse, BaseModel):
     id: int
     name: str
 
-class OrderClientResponse(ConfigResponse, ClientMinResponse):
+class OrderClientResponse(ClientMinResponse):
     national_id: EmptyStrToNone = None
     phone_number: EmptyStrToNone = None
 
@@ -52,7 +53,7 @@ class ClientUpdate(BaseModel):
 
 class DeviceTypeBase(BaseModel):
     name: str
-    prefix: str
+    prefix: EmptyStrToNone = None
 
 class DeviceTypeCreate(DeviceTypeBase, ConfigCreate):
     pass
@@ -103,14 +104,14 @@ class DeviceBaseResponse(ConfigResponse, DeviceBase):
     serial_number: EmptyStrToNone = None
     description: EmptyStrToNone = None
 
-class DeviceResponse(ConfigResponse, DeviceBase):
-    client_id: ClientMinResponse
-    device_type_id: DeviceTypeResponse
-    device_brand_id: DeviceBrandResponse
+class DeviceResponse(DeviceBase):
+    client: ClientMinResponse
+    device_type: DeviceTypeResponse
+    device_brand: DeviceBrandResponse
 
-class DeviceMinResponse(ConfigResponse, DeviceBaseResponse):
-    device_type_id: DeviceTypeResponse
-    device_brand_id: DeviceBrandResponse
+class DeviceMinResponse(DeviceBaseResponse):
+    device_type: DeviceTypeResponse
+    device_brand: DeviceBrandResponse
 
 class DeviceUpdate(BaseModel):
     model: EmptyStrToNone = None
@@ -170,16 +171,16 @@ class RepairOrderBase(BaseModel):
 class RepairOrderCreate(RepairOrderBase, ConfigCreate):
     pass
 
-class RepairOrderResponse(ConfigResponse, RepairOrderBase):
+class RepairOrderResponse(RepairOrderBase):
     id: int
-    client_id: Optional[OrderClientResponse] = None
-    device_id: Optional[DeviceMinResponse] = None
-    technician_id: Optional[TechnicianMinResponse] = None
+    client: Optional[OrderClientResponse] = None
+    device: Optional[DeviceMinResponse] = None
+    technician: Optional[TechnicianMinResponse] = None
 
 class RepairOrderDetailResponse(ConfigResponse, RepairOrderResponse):
-    client_id: ClientResponse
-    device_id: DeviceResponse
-    technician_id: TechnicianResponse
+    client: ClientResponse
+    device: DeviceResponse
+    technician: TechnicianResponse
 
 class RepairOrderUpdate(BaseModel):
     entry_date: EmptyDateToNone = None
@@ -201,7 +202,8 @@ class SparePartBase(BaseModel):
     name: str
     component_type: str
     brand: EmptyStrToNone = None
-    stock: EmptyIntToNone = 0
+    supplier: EmptyStrToNone = None
+    stock: int
     price: EmptyFloatToNone = None
 
 class SparePartCreate(SparePartBase, ConfigCreate):
@@ -210,8 +212,16 @@ class SparePartCreate(SparePartBase, ConfigCreate):
 class SparePartResponse(ConfigResponse, SparePartBase):
     id: int
 
+class SparePartOrderResponse(ConfigResponse, BaseModel):
+    id: int
+    name: str
+    component_type: str
+
 class SparePartUpdate(BaseModel):
     name: EmptyStrToNone = None
+    component_type: EmptyStrToNone = None
+    brand: EmptyStrToNone = None
+    supplier: EmptyStrToNone = None
     stock: EmptyIntToNone = None
     price: EmptyFloatToNone = None
 
@@ -230,6 +240,7 @@ class OrderSparePartCreate(OrderSparePartBase, ConfigCreate):
 
 class OrderSparePartResponse(ConfigResponse, OrderSparePartBase):
     id: int
+    spare_part: SparePartBase
 
 class OrderSparePartUpdate(BaseModel):
     quantity: EmptyIntToNone = None
@@ -266,6 +277,7 @@ class OrderServiceCreate(OrderServiceBase, ConfigCreate):
 
 class OrderServiceResponse(ConfigResponse, OrderServiceBase):
     id: int
+    service_type: ServiceTypeResponse
 
 class OrderServiceUpdate(BaseModel):
     service_type_id: EmptyIntToNone = None
@@ -285,6 +297,7 @@ class StorageCreate(StorageBase, ConfigCreate):
 
 class StorageResponse(ConfigResponse, StorageBase):
     id: int
+    device: DeviceBaseResponse
 
 class StorageUpdate(BaseModel):
     entry_date: EmptyDateToNone = None

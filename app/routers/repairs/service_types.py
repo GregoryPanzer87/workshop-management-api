@@ -159,6 +159,7 @@ def update_service_type(
 
 @router.delete(
     "/{service_type_id}", 
+    status_code=status.HTTP_200_OK,
     dependencies=[Depends(require_roles(LEVEL_ADVANCE))]
 )
 def delete_service_type(

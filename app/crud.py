@@ -207,10 +207,6 @@ class DeviceCRUD(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
     def update_owner(self, db: Session, device_id: int, new_client_id: int) -> Device:
         """Assign id_client to a new client without changes to the history"""
         db_device = self.get_by_id(db, id=device_id)
-
-        if not db_device:
-            return None
-        
         db_device.client_id = new_client_id
         db.commit()
         db.refresh(db_device)

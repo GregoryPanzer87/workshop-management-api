@@ -17,11 +17,11 @@ class EmployeeDirectory(Base):
 
     # Table Columns
     id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
-    full_name: Mapped[str] = mapped_column(String(80), nullable=False)
+    full_name: Mapped[str] = mapped_column(String(250), nullable=False)
     national_id: Mapped[str] = mapped_column(String(20), nullable=False)
     tax_id: Mapped[str] = mapped_column(String(20), nullable=False)
     short_address: Mapped[str] = mapped_column(String(30), nullable=False)
-    occupation: Mapped[str] = mapped_column(String(30), nullable=False)
+    occupation: Mapped[str] = mapped_column(String(50), nullable=False)
     employee_code: Mapped[Optional[str]] = mapped_column(String(15), nullable=True)
     entry_date: Mapped[date] = mapped_column(nullable=False)
     is_active: Mapped[bool] = mapped_column(default=True)
