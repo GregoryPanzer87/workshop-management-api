@@ -20,6 +20,7 @@ from app.core import LEVEL_ADVANCE, LEVEL_BASIC, LEVEL_MEDIUM
 
 router = APIRouter(prefix="/device_types", tags=["Device Types"])
 
+NOT_FOUND_DEVICE_TYPES = ["Tipo de equipo no encontrado."]
 
 @router.post(
     "/",
@@ -58,21 +59,27 @@ def create_device_type(
 
     try:
         db_device_type = crud_device_type.create(db, obj_in=create_data)
+
+        log_action(
+            db,
+            user_id=current_user.id,
+            action="CREATE",
+            entity="device_types",
+            entity_id=db_device_type.id,
+            details=f"Tipo de equipo registrado: {db_device_type.name} (ID: {db_device_type.id})",
+        )
+
+        db.commit()
+        db.refresh(db_device_type)
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=["Ocurrió un conflicto al registrar el Tipo de equipo. Verifique los datos ingresados."]
         )
-
-    log_action(
-        db,
-        user_id=current_user.id,
-        action="CREATE",
-        entity="device_types",
-        entity_id=db_device_type.id,
-        details=f"Tipo de equipo registrado: {db_device_type.name} (ID: {db_device_type.id})",
-    )
+    except Exception as e:
+        db.rollback()
+        raise e
 
     return db_device_type
 
@@ -111,7 +118,7 @@ def read_device_type_by_id(device_type_id: int, db: Session = Depends(get_db)):
     if not db_device_type:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=["Tipo de equipo no encontrado"],
+            detail=NOT_FOUND_DEVICE_TYPES,
         )
     return db_device_type
 
@@ -132,7 +139,7 @@ def update_device_type(
     if not db_device_type:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=["Tipo de equipo no encontrado"],
+            detail=NOT_FOUND_DEVICE_TYPES,
         )
 
     update_data = device_type_in.model_dump(exclude_unset=True)
@@ -166,22 +173,28 @@ def update_device_type(
 
     try:
         db_device_type = crud_device_type.update(db, db_obj=db_device_type, obj_in=update_data)
+
+        if audit_details:
+            log_action(
+                db,
+                user_id=current_user.id,
+                action="UPDATE",
+                entity="device_types",
+                entity_id=device_type_id,
+                details=audit_details
+            )
+
+        db.commit()
+        db.refresh(db_device_type)
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=["Ocurrió un conflicto al actualizar el tipo de equipo. Verifique los datos ingresados."]
         )
-
-    if audit_details:
-        log_action(
-            db,
-            user_id=current_user.id,
-            action="UPDATE",
-            entity="device_types",
-            entity_id=device_type_id,
-            details=audit_details
-        )
+    except Exception as e:
+        db.rollback()
+        raise e
 
     return db_device_type
 
@@ -201,23 +214,29 @@ def delete_device_type(
     if not db_device_type:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=["Tipo de equipo no encontrado"],
+            detail=NOT_FOUND_DEVICE_TYPES,
         )
     try:
         crud_device_type.delete(db, db_obj=db_device_type)
+
+        log_action(
+            db,
+            user_id=current_user.id,
+            action="DELETE",
+            entity="device_types",
+            entity_id=device_type_id,
+            details=f"Tipo de equipo eliminado: {db_device_type.name} (ID: {db_device_type.id})",
+        )
+
+        db.commit()
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=["No se puede eliminar este tipo de equipo porque tiene equipos asociados."]
         )
-
-    log_action(
-        db,
-        user_id=current_user.id,
-        action="DELETE",
-        entity="device_types",
-        entity_id=device_type_id,
-        details=f"Tipo de equipo eliminado: {db_device_type.name} (ID: {db_device_type.id})",
-    )
+    except Exception as e:
+            db.rollback()
+            raise e
+    
     return {"message": f"Tipo de equipo '{db_device_type.name}' eliminado correctamente"}
