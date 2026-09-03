@@ -27,6 +27,8 @@ DEVICE_LOAD_OPTIONS = [
 
 router = APIRouter(prefix="/devices", tags=["Devices"])
 
+NOT_FOUND_DEVICE = ["Equipo no encontrado."]
+
 @router.post("/", response_model=DeviceResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_roles(LEVEL_MEDIUM))])
 def create_device(
     device_in: DeviceCreate, 
@@ -63,21 +65,27 @@ def create_device(
 
     try:
         db_device = crud_device.create(db, obj_in=create_data)
+
+        log_action(
+            db,
+            user_id=current_user.id,
+            action="CREATE",
+            entity="devices",
+            entity_id=db_device.id,
+            details=f"Equipo registrado: (ID: {db_device.id})",
+        )
+
+        db.commit()
+        db.refresh(db_device)
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=["Ocurrió un conflicto al registrar el serial. Intente de nuevo."]
         )
-
-    log_action(
-        db,
-        user_id=current_user.id,
-        action="CREATE",
-        entity="devices",
-        entity_id=db_device.id,
-        details=f"Equipo registrado: (ID: {db_device.id})",
-    )
+    except Exception as e:
+        db.rollback()
+        raise e
 
     return crud_device.get_by_id(db, id=db_device.id, options=DEVICE_LOAD_OPTIONS)
 
@@ -136,7 +144,7 @@ def read_device_by_id(device_id: int, db: Session = Depends(get_db)):
     if not db_device:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
-            detail=["Equipo no encontrado"]
+            detail=NOT_FOUND_DEVICE
         )
     return db_device
 
@@ -152,7 +160,7 @@ def update_device(
     if not db_device:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
-            detail=["Equipo no encontrado"]
+            detail=NOT_FOUND_DEVICE
         )
 
     update_data = device_in.model_dump(exclude_unset=True)
@@ -188,22 +196,28 @@ def update_device(
 
     try:
         crud_device.update(db, db_obj=db_device, obj_in=update_data)
+
+        if audit_details:
+                log_action(
+                    db,
+                    user_id=current_user.id,
+                    action="UPDATE",
+                    entity="devices",
+                    entity_id=device_id,
+                    details=audit_details
+                )
+
+        db.commit()
+        db.refresh(db_device)
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=["Ocurrió un conflicto al registrar el serial. Intente de nuevo."]
+            detail=["Ocurrió un conflicto al actualizar el serial. Intente de nuevo."]
         )
-
-    if audit_details:
-        log_action(
-            db,
-            user_id=current_user.id,
-            action="UPDATE",
-            entity="devices",
-            entity_id=device_id,
-            details=audit_details
-        )
+    except Exception as e:
+        db.rollback()
+        raise e
         
     return crud_device.get_by_id(db, device_id, options=DEVICE_LOAD_OPTIONS)
 
@@ -214,26 +228,31 @@ def delete_device(device_id: int, db: Session = Depends(get_db), current_user: U
     if not db_device:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
-            detail=["Equipo no encontrado"]
+            detail=NOT_FOUND_DEVICE
         )
         
     try:
         crud_device.delete(db, db_obj=db_device)
+
+        log_action(
+            db,
+            user_id=current_user.id,
+            action="DELETE",
+            entity="devices",
+            entity_id=device_id,
+            details=f"Equipo eliminado: (ID: {db_device.id})",
+        )
+
+        db.commit()
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=["No se puede eliminar el equipo porque tiene ordenes asociadas."]
         )
-
-    log_action(
-        db,
-        user_id=current_user.id,
-        action="DELETE",
-        entity="devices",
-        entity_id=device_id,
-        details=f"Equipo eliminado: (ID: {db_device.id})",
-    )
+    except Exception as e:
+        db.rollback()
+        raise e
     
     return {"message": f"Equipo '{db_device.device_type.name}-{db_device.model}-{db_device.serial_number}' eliminado correctamente"}
 
@@ -249,7 +268,7 @@ def change_owner(
     if not db_device:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
-            detail=["Equipo no encontrado"]
+            detail=NOT_FOUND_DEVICE
         )
 
     if db_device.client_id == new_client_id:
@@ -268,15 +287,29 @@ def change_owner(
     old_client_str = f"{db_device.client.name} (ID: {db_device.client.id})" if db_device.client else "Desconocido"
     new_client_str = f"{new_client.name} (ID: {new_client.id})"
 
-    db_device = crud_device.update_owner(db, device_id=device_id, new_client_id=new_client_id)
 
-    log_action(
-        db,
-        user_id=current_user.id,
-        action="UPDATE",
-        entity="devices",
-        entity_id=device_id,
-        details=f"Transferencia de dueño del equipo (iD: {device_id}): De {old_client_str} a {new_client_str}",
-    )
+    try:
+        db_device = crud_device.update_owner(db, device_id=device_id, new_client_id=new_client_id)
+
+        log_action(
+            db,
+            user_id=current_user.id,
+            action="UPDATE",
+            entity="devices",
+            entity_id=device_id,
+            details=f"Transferencia de dueño del equipo (iD: {device_id}): De {old_client_str} a {new_client_str}",
+        )
+
+        db.commit()
+        db.refresh(db_device)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=["Ocurrió un error al actualizar el dueño. Intente de nuevo."]
+        )
+    except Exception as e:
+        db.rollback()
+        raise e
 
     return crud_device.get_by_id(db, device_id, options=DEVICE_LOAD_OPTIONS)
