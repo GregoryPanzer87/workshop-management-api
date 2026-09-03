@@ -15,6 +15,8 @@ from app.core import LEVEL_ADVANCE, LEVEL_BASIC, LEVEL_MEDIUM
 
 router = APIRouter(prefix="/device_brands", tags=["Device brands"])
 
+NOT_FOUND_BRAND = ["Marca no encontrada."]
+CONFLICT_BRAND = ["El nombre de la marca ya está en uso."]
 
 @router.post(
     "/",
@@ -31,26 +33,32 @@ def create_device_brand(
     if crud_device_brand.get_by_other(db, value=device_brand_in.name, field="name"):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=["El nombre de la marca ya está en uso"],
+            detail=CONFLICT_BRAND,
         )
 
     try:
         db_device_brand = crud_device_brand.create(db, obj_in=device_brand_in)
+
+        log_action(
+            db,
+            user_id=current_user.id,
+            action="CREATE",
+            entity="device_brands",
+            entity_id=db_device_brand.id,
+            details=f"Marca registrada: {db_device_brand.name} (ID: {db_device_brand.id})",
+        )
+
+        db.commit()
+        db.refresh(db_device_brand)
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=["Ocurrió un conflicto al registrar la marca. Verifique los datos ingresados."]
         )
-
-    log_action(
-        db,
-        user_id=current_user.id,
-        action="CREATE",
-        entity="device_brands",
-        entity_id=db_device_brand.id,
-        details=f"Marca registrada: {db_device_brand.name} (ID: {db_device_brand.id})",
-    )
+    except Exception as e:
+        db.rollback()
+        raise e
 
     return db_device_brand
 
@@ -89,7 +97,7 @@ def read_device_brand_by_id(device_brand_id: int, db: Session = Depends(get_db))
     if not db_device_brand:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=["Marca no encontrada"],
+            detail=NOT_FOUND_BRAND,
         )
     return db_device_brand
 
@@ -110,7 +118,7 @@ def update_device_brand(
     if not db_device_brand:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=["Marca no encontrada"],
+            detail=NOT_FOUND_BRAND,
         )
 
     update_data = device_brand_in.model_dump(exclude_unset=True)
@@ -123,7 +131,7 @@ def update_device_brand(
         if val_name and val_name.id != device_brand_id:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=["El nombre de la marca ya está en uso"],
+                detail=CONFLICT_BRAND,
             )
 
     audit_details = build_audit_change_details(
@@ -134,22 +142,28 @@ def update_device_brand(
 
     try:
         db_device_brand = crud_device_brand.update(db, db_obj=db_device_brand, obj_in=update_data)
+
+        if audit_details:
+            log_action(
+                db,
+                user_id=current_user.id,
+                action="UPDATE",
+                entity="device_brands",
+                entity_id=device_brand_id,
+                details=audit_details
+            )
+
+        db.commit()
+        db.refresh(db_device_brand)
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=["Ocurrió un conflicto al actualizar la marca. Verifique los datos ingresados."]
         )
-
-    if audit_details:
-        log_action(
-            db,
-            user_id=current_user.id,
-            action="UPDATE",
-            entity="device_brands",
-            entity_id=device_brand_id,
-            details=audit_details
-        )
+    except Exception as e:
+        db.rollback()
+        raise e
 
     return db_device_brand
 
@@ -169,23 +183,29 @@ def delete_device_brand(
     if not db_device_brand:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=["Marca no encontrada"],
+            detail=NOT_FOUND_BRAND,
         )
     try:
         crud_device_brand.delete(db, db_obj=db_device_brand)
+
+        log_action(
+            db,
+            user_id=current_user.id,
+            action="DELETE",
+            entity="device_brands",
+            entity_id=device_brand_id,
+            details=f"Marca eliminada: {db_device_brand.name} (ID: {db_device_brand.id})",
+        )
+
+        db.commit()
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=["No se puede eliminar esta marca porque tiene equipos asociados."]
         )
-
-    log_action(
-        db,
-        user_id=current_user.id,
-        action="DELETE",
-        entity="device_brands",
-        entity_id=device_brand_id,
-        details=f"Marca eliminada: {db_device_brand.name} (ID: {db_device_brand.id})",
-    )
+    except Exception as e:
+        db.rollback()
+        raise e
+    
     return {"message": f"Marca '{db_device_brand.name}' eliminada correctamente"}
