@@ -235,15 +235,6 @@ class EmployeeCRUD(CRUDBase[EmployeeDirectory, EmployeeDirectoryCreate, Employee
 
 # --- TECHNICIAN CRUD (JOIN) ---
 class TechnicianCRUD(CRUDBase[Technician, TechnicianCreate, TechnicianUpdate]):
-    def get_by_code(self, db: Session, employee_code: str):
-        """Search a technician using the employee code"""
-        stmt =  (
-            select(Technician)
-            .join(EmployeeDirectory)
-            .where(EmployeeDirectory.employee_code == employee_code)
-        )
-        return db.scalar(stmt)
-
     def delete(self, db: Session, db_obj: Technician) -> Technician:
         """Deactivate an technician (is_active = False) instead of deleting it"""
         db_obj.is_active = False

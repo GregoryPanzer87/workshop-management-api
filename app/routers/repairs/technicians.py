@@ -11,8 +11,6 @@ from app import (
     crud_technician, crud_employee, get_db
     )
 from app.utils import (
-    validate_unique_fields_by_create,
-    validate_unique_fields_by_update, 
     build_audit_change_details,
 )
 from app.api.deps import get_current_user, require_roles
@@ -58,23 +56,29 @@ def create_technician(technician_in: TechnicianCreate, db: Session = Depends(get
 
     try:
         db_technician = crud_technician.create(db, obj_in=create_data)
+
+        log_action(
+            db,
+            user_id=current_user.id,
+            action="CREATE",
+            entity="technicians",
+            entity_id=db_technician.id,
+            details=f"Tecnico registrado: {create_data.get('name')} (ID: {db_technician.id})",
+        )
+
+        db.commit()
+        db.refresh(db_technician)
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=["Ocurrió un conflicto al registrar el técnico. Es posible que ya lo hayan registrado."]
         )
-
-    log_action(
-        db,
-        user_id=current_user.id,
-        action="CREATE",
-        entity="technicians",
-        entity_id=db_technician.id,
-        details=f"Tecnico registrado: {create_data.get('name')} (ID: {db_technician.id})",
-    )
+    except Exception as e:
+        db.rollback()
+        raise e
         
-    return crud_technician.get_by_id(db, id=db_technician.id)
+    return db_technician
 
 @router.get("/", response_model=List[TechnicianResponse], dependencies=[Depends(require_roles(LEVEL_BASIC))])
 def read_technicians(
@@ -87,9 +91,6 @@ def read_technicians(
     q = q.strip() if q else None
     if q:
         search_query = q
-        tech_by_code = crud_technician.get_by_code(db, employee_code=search_query)
-        if tech_by_code:
-            return [tech_by_code]
 
         return crud_technician.search_ilike(
             db=db, 
@@ -98,7 +99,8 @@ def read_technicians(
                 cast(Technician.id, String),
                 cast(Technician.commission, String), 
                 Technician.name,
-                EmployeeDirectory.national_id
+                EmployeeDirectory.national_id,
+                EmployeeDirectory.employee_code
             ],
             joins=[EmployeeDirectory],
             limit=limit
@@ -172,24 +174,30 @@ def update_technician(technician_id: int,technician_in: TechnicianUpdate,db: Ses
 
     try:
         db_technician = crud_technician.update(db, db_obj=db_technician, obj_in=update_data)
+
+        if audit_details:
+            log_action(
+                db,
+                user_id=current_user.id,
+                action="UPDATE",
+                entity="technicians",
+                entity_id=technician_id,
+                details=audit_details
+            )
+
+        db.commit()
+        db.refresh(db_technician)
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=["Ocurrió un conflicto al registrar el técnico. Es posible que ya lo hayan registrado."]
             )
-
-    if audit_details:
-        log_action(
-            db,
-            user_id=current_user.id,
-            action="UPDATE",
-            entity="technicians",
-            entity_id=technician_id,
-            details=audit_details
-        )
+    except Exception as e:
+        db.rollback()
+        raise e
         
-    return crud_technician.get_by_id(db, id=technician_id)
+    return db_technician
 
 @router.delete("/{technician_id}", status_code=status.HTTP_200_OK, dependencies=[Depends(require_roles(LEVEL_ADVANCE))])
 def delete_technician(technician_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -201,22 +209,29 @@ def delete_technician(technician_id: int, db: Session = Depends(get_db), current
             detail=["Técnico no encontrado"],
         )
 
+    tech_name = db_technician.name
+
     try:
         crud_technician.delete(db, db_technician)
+
+        log_action(
+            db,
+            user_id=current_user.id,
+            action="DELETE",
+            entity="technicians",
+            entity_id=technician_id,
+            details=f"Técnico desactivado: {tech_name} (ID: {technician_id})",
+        )
+
+        db.commit()
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=["Error al eliminar el técnico, es posible que ya este eliminado."]
         )
+    except Exception as e:
+        db.rollback()
+        raise e
 
-    log_action(
-        db,
-        user_id=current_user.id,
-        action="DELETE",
-        entity="technicians",
-        entity_id=technician_id,
-        details=f"Técnico desactivado: {db_technician.name} (ID: {db_technician.id})",
-    )
-
-    return {"message": f"Técnico {db_technician.name} #(ID: {db_technician.id}) desactivado correctamente"}
+    return {"message": f"Técnico {tech_name} (ID: {technician_id}) desactivado correctamente"}
