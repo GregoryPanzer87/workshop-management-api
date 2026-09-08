@@ -1,21 +1,27 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from sqlalchemy import cast, String
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 
 from app import (
     OrderSparePart, OrderSparePartCreate,
     OrderSparePartResponse, OrderSparePartUpdate,
-    crud_order_spare_part, crud_spare_part, crud_repair_order, get_db,
-    User
+    User, crud_order_spare_part, crud_spare_part, crud_repair_order, get_db,
 )
 from app.utils import build_audit_change_details
 from app.services import log_action
+from app.services.inventory_service import update_inventory_spare_part
 from app.api.deps import get_current_user, require_roles
 from app.core import LEVEL_ADVANCE, LEVEL_BASIC, LEVEL_MEDIUM
 
 router = APIRouter(prefix="/order_spare_parts", tags=["Order Spare Parts"])
+
+ORDER_SPARE_PARTS_LOAD_OPTIONS = [
+    joinedload(OrderSparePart.spare_part)
+]
+
+NOT_FOUND_SPARE_PART = ["El repuesto especificado no existe."]
+NOT_FOUND_ORDER_SPARE_PARTS = ["Repuesto no utilizado en la orden."]
 
 
 @router.post(
@@ -29,8 +35,7 @@ def create_order_spare_part(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    """Create an order spare part in the database."""
-    # 1. Validar existencia de entidades referenciadas (FKs)
+    """Create an order spare part in the database and updates inventory if tracked."""
     if not crud_repair_order.get_by_id(db, id=order_spare_part_in.repair_order_id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -41,10 +46,9 @@ def create_order_spare_part(
     if not db_spare_part:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=["El repuesto especificado no existe"],
+            detail=NOT_FOUND_SPARE_PART,
         )
 
-    # 2. Validar duplicados en la misma orden
     validation = crud_order_spare_part.search_where_by_fields(
         db=db,
         repair_order_id=order_spare_part_in.repair_order_id,
@@ -56,64 +60,42 @@ def create_order_spare_part(
             detail=[f"El repuesto '{db_spare_part.name}' ya se encuentra registrado en la orden #{order_spare_part_in.repair_order_id}"]
         )
     
+    quantity = order_spare_part_in.quantity
+
     try:
+        update_inventory_spare_part(
+            db=db,
+            delta=-quantity,
+            user_id=current_user.id,
+            db_obj=db_spare_part
+        )
+
         db_order_spare_part = crud_order_spare_part.create(db, obj_in=order_spare_part_in)
+
+        log_action(
+            db,
+            user_id=current_user.id,
+            action="CREATE",
+            entity="order_spare_parts",
+            entity_id=db_order_spare_part.id,
+            details=f"Repuesto '{db_spare_part.name}' agregado a la orden #{db_order_spare_part.repair_order_id} (Cant: {db_order_spare_part.quantity})",
+        )
+
+        db.commit()
+    except HTTPException:
+        db.rollback()
+        raise
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=["Ocurrió un conflicto al asociar el repuesto a la orden. Verifique los datos ingresados."]
         )
-    
-    log_action(
-        db,
-        user_id=current_user.id,
-        action="CREATE",
-        entity="order_spare_parts",
-        entity_id=db_order_spare_part.id,
-        details=f"Repuesto '{db_spare_part.name}' agregado a la orden #{db_order_spare_part.repair_order_id} (Cant: {db_order_spare_part.quantity})",
-    )
+    except Exception as e:
+        db.rollback()
+        raise e
 
-    return db_order_spare_part
-
-
-@router.get(
-    "/",
-    response_model=List[OrderSparePartResponse],
-    dependencies=[Depends(require_roles(LEVEL_BASIC))],
-)
-def read_order_spare_parts(
-    q: Optional[str] = None,
-    skip: int = 0,
-    limit: int = 20,
-    db: Session = Depends(get_db),
-):
-    """Retrieves a paginated list of order spare parts or performs a real-time search by sending 'q'."""
-    q = q.strip() if q else None
-    if q:
-        return crud_order_spare_part.search_ilike(
-            db=db,
-            query=q,
-            search_fields=[cast(OrderSparePart.repair_order_id, String)],
-            limit=limit,
-        )
-    return crud_order_spare_part.get_multi(db, skip=skip, limit=limit)
-
-
-@router.get(
-    "/{order_spare_part_id}", 
-    response_model=OrderSparePartResponse, 
-    dependencies=[Depends(require_roles(LEVEL_BASIC))]
-)
-def read_order_spare_part_by_id(order_spare_part_id: int, db: Session = Depends(get_db)):
-    """Retrieves a single order spare part by ID."""
-    db_order_spare_part = crud_order_spare_part.get_by_id(db, id=order_spare_part_id)
-    if not db_order_spare_part:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail=["Repuesto no usado en la orden"]
-        )
-    return db_order_spare_part
+    return crud_order_spare_part.get_by_id(db, db_order_spare_part.id, options=ORDER_SPARE_PARTS_LOAD_OPTIONS)
 
 
 @router.patch(
@@ -127,25 +109,33 @@ def update_order_spare_part(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    """Update an order spare part partially or completely."""
-    db_order_spare_part = crud_order_spare_part.get_by_id(db, id=order_spare_part_id)
+    """Update an order spare part partially or completely and adjusts inventory."""
+    db_order_spare_part = crud_order_spare_part.get_by_id(db, id=order_spare_part_id, options=ORDER_SPARE_PARTS_LOAD_OPTIONS)
     if not db_order_spare_part:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=["Repuesto no usado en la orden"],
+            detail=NOT_FOUND_ORDER_SPARE_PARTS,
         )
 
     update_data = order_spare_part_in.model_dump(exclude_unset=True)
     if not update_data:
         return db_order_spare_part
 
+    old_quantity = db_order_spare_part.quantity
+    old_spare_part_id = db_order_spare_part.spare_part_id
+
+    new_quantity = update_data.get("quantity")
     new_spare_part_id = update_data.get("spare_part_id")
-    if new_spare_part_id and new_spare_part_id != db_order_spare_part.spare_part_id:
-        db_spare_part = crud_spare_part.get_by_id(db, id=new_spare_part_id)
-        if not db_spare_part:
+
+    target_quantity = new_quantity if new_quantity is not None else old_quantity
+    is_new_spare_part = new_spare_part_id is not None and new_spare_part_id != old_spare_part_id
+
+    if is_new_spare_part:
+        target_spare_part = crud_spare_part.get_by_id(db, id=new_spare_part_id)
+        if not target_spare_part:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=["El repuesto especificado no existe"],
+                detail=NOT_FOUND_SPARE_PART,
             )
 
         validation = crud_order_spare_part.search_where_by_fields(
@@ -156,8 +146,10 @@ def update_order_spare_part(
         if validation:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=[f"El repuesto '{db_spare_part.name}' ya se encuentra registrado en la orden #{db_order_spare_part.repair_order_id}"],
+                detail=[f"El repuesto '{target_spare_part.name}' ya se encuentra registrado en la orden #{db_order_spare_part.repair_order_id}"],
             )
+    else:
+        target_spare_part = db_order_spare_part.spare_part
 
     audit_details = build_audit_change_details(
         db_obj=db_order_spare_part,
@@ -166,25 +158,49 @@ def update_order_spare_part(
     )
 
     try:
+        if is_new_spare_part:
+            # Old Data
+            update_inventory_spare_part(
+                db=db, delta=old_quantity, user_id=current_user.id, spare_part_id=old_spare_part_id
+            )
+            # New Data
+            update_inventory_spare_part(
+                db=db, delta=-target_quantity, user_id=current_user.id, db_obj=target_spare_part
+            )
+        else:
+            delta = old_quantity - target_quantity
+            if delta != 0:
+                update_inventory_spare_part(
+                    db=db, delta=delta, user_id=current_user.id, db_obj=target_spare_part
+                )
+
         crud_order_spare_part.update(db, db_obj=db_order_spare_part, obj_in=update_data)
+
+        if audit_details:
+            log_action(
+                db,
+                user_id=current_user.id,
+                action="UPDATE",
+                entity="order_spare_parts",
+                entity_id=order_spare_part_id,
+                details=audit_details,
+            )
+
+        db.commit()
+    except HTTPException:
+        db.rollback()
+        raise
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=["Ocurrió un conflicto al actualizar el repuesto de la orden. Verifique los datos ingresados."]
         )
+    except Exception as e:
+        db.rollback()
+        raise e
 
-    if audit_details:
-        log_action(
-            db,
-            user_id=current_user.id,
-            action="UPDATE",
-            entity="order_spare_parts",
-            entity_id=order_spare_part_id,
-            details=audit_details,
-        )
-
-    return db_order_spare_part
+    return crud_order_spare_part.get_by_id(db, order_spare_part_id, options=ORDER_SPARE_PARTS_LOAD_OPTIONS)
 
 
 @router.delete(
@@ -197,33 +213,48 @@ def delete_order_spare_part(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Deletes an order spare part by ID."""
-    db_order_spare_part = crud_order_spare_part.get_by_id(db, id=order_spare_part_id)
+    """Deletes an order spare part by ID and returns item to inventory if tracked."""
+    db_order_spare_part = crud_order_spare_part.get_by_id(db, id=order_spare_part_id, options=ORDER_SPARE_PARTS_LOAD_OPTIONS)
     if not db_order_spare_part:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=["Repuesto no usado en la orden"],
+            detail=NOT_FOUND_ORDER_SPARE_PARTS,
         )
     
-    db_spare_part = crud_spare_part.get_by_id(db, id=db_order_spare_part.spare_part_id)
-    spare_part_name = db_spare_part.name if db_spare_part else f"ID {db_order_spare_part.spare_part_id}"
+    spare_part_name = db_order_spare_part.spare_part.name if db_order_spare_part.spare_part else "Desconocido"
+    repair_order_id = db_order_spare_part.repair_order_id
 
     try:
+        update_inventory_spare_part(
+            db=db,
+            delta=db_order_spare_part.quantity,
+            user_id=current_user.id,
+            spare_part_id=db_order_spare_part.spare_part_id
+        )
+
         crud_order_spare_part.delete(db, db_obj=db_order_spare_part)
+
+        log_action(
+            db,
+            user_id=current_user.id,
+            action="DELETE",
+            entity="order_spare_parts",
+            entity_id=order_spare_part_id,
+            details=f"Repuesto '{spare_part_name}' eliminado de la orden #{repair_order_id}",
+        )
+
+        db.commit()
+    except HTTPException:
+        db.rollback()
+        raise
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=["No se puede eliminar el repuesto de la orden debido a dependencias asociadas."]
         )
+    except Exception as e:
+        db.rollback()
+        raise e
 
-    log_action(
-        db,
-        user_id=current_user.id,
-        action="DELETE",
-        entity="order_spare_parts",
-        entity_id=order_spare_part_id,
-        details=f"Repuesto '{spare_part_name}' eliminado de la orden #{db_order_spare_part.repair_order_id}",
-    )
-
-    return {"message": f"Repuesto '{spare_part_name}' de la orden #{db_order_spare_part.repair_order_id} eliminado correctamente"}
+    return {"message": f"Repuesto '{spare_part_name}' de la orden #{repair_order_id} eliminado correctamente"}

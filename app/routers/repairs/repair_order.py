@@ -55,21 +55,25 @@ def create_repair_order(repair_order_in: RepairOrderCreate, db: Session = Depend
 
     try: 
         db_repair_order = crud_repair_order.create(db, obj_in=create_data)
+
+        log_action(
+            db,
+            user_id=current_user.id,
+            action="CREATE",
+            entity="repair_orders",
+            entity_id=db_repair_order.id,
+            details=f"Orden creada: (ID: {db_repair_order.id})",
+        )
+        db.commit()
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=INTEGRITY_ERROR
         )
-
-    log_action(
-        db,
-        user_id=current_user.id,
-        action="CREATE",
-        entity="repair_orders",
-        entity_id=db_repair_order.id,
-        details=f"Orden creada: (ID: {db_repair_order.id})",
-    )
+    except Exception as e:
+        db.rollback()
+        raise e
 
     return crud_repair_order.get_by_id(db, id=db_repair_order.id, options=REPAIR_ORDER_LOAD_OPTIONS)
 
@@ -188,22 +192,27 @@ def update_repair_order(repair_order_id: int, repair_order_in: RepairOrderUpdate
 
     try: 
         crud_repair_order.update(db, db_obj=db_repair_order, obj_in=update_data)
+
+        if audit_details:
+            log_action(
+                db,
+                user_id=current_user.id,
+                action="UPDATE",
+                entity="repair_orders",
+                entity_id=repair_order_id,
+                details=audit_details
+            )
+
+        db.commit()
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=INTEGRITY_ERROR
         )
-
-    if audit_details:
-        log_action(
-            db,
-            user_id=current_user.id,
-            action="UPDATE",
-            entity="repair_orders",
-            entity_id=repair_order_id,
-            details=audit_details
-        )
+    except Exception as e:
+        db.rollback()
+        raise e
     
     return crud_repair_order.get_by_id(db, id=repair_order_id, options=REPAIR_ORDER_LOAD_OPTIONS)
 
@@ -218,20 +227,25 @@ def delete_repair_order(repair_order_id: int, db: Session = Depends(get_db), cur
 
     try:
         crud_repair_order.delete(db, db_obj=db_repair_order)
+
+        log_action(
+            db,
+            user_id=current_user.id,
+            action="DELETE",
+            entity="repair_orders",
+            entity_id=repair_order_id,
+            details=f"Orden de reparación eliminada: #{repair_order_id} (ID de equipo: {db_repair_order.device_id}) (ID de cliente: {db_repair_order.client_id})",
+        )
+
+        db.commit()
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=["No se puede eliminar la orden de reparación porque existen registros o detalles asociados a ella."]
         )
-
-    log_action(
-        db,
-        user_id=current_user.id,
-        action="DELETE",
-        entity="repair_orders",
-        entity_id=repair_order_id,
-        details=f"Orden de reparación eliminada: #{repair_order_id} (ID de equipo: {db_repair_order.device_id}) (ID de cliente: {db_repair_order.client_id})",
-    )
+    except Exception as e:
+        db.rollback()
+        raise e
 
     return {"message": f"Orden de reparación #{repair_order_id} eliminada correctamente"}

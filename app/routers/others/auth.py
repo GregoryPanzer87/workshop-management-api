@@ -1,13 +1,22 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from app.api.deps import get_current_user
+from sqlalchemy.exc import IntegrityError
+
 from app import (
     User, UserCreate, UserResponse, UserUpdate, 
     crud_user, crud_client, crud_employee, get_db
 )
+from app.utils import (
+    build_audit_change_details, 
+    validate_exists_by_create,
+    validate_exists_by_update,
+    validate_unique_fields_by_create,
+    validate_unique_fields_by_update,
+)
 from app.core.security import verify_password, create_access_token
-from app.api.deps import require_roles
+from app.api.deps import require_roles, get_current_user
+from app.services import log_action
 from app.core.security import LEVEL_BASIC, LEVEL_ADVANCE
 
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
@@ -40,42 +49,65 @@ def login(
     }
 
 @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_roles(LEVEL_ADVANCE))])
-def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
+def create_user(
+    user_in: UserCreate, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user),
+):
     """Create a new user in the database."""
-    errors1 = []
-    errors2 = []
+    create_data = user_in.model_dump(exclude_unset=True)
 
-    if user_in.client_id:
-        db_client = crud_client.get_by_id(db, user_in.client_id)
-        if not db_client:
-            errors1.append(f"No existe un cliente con esta ID {user_in.client_id}.")
-    
-    if user_in.employee_id:
-        db_employee = crud_employee.get_by_id(db, user_in.employee_id)
-        if not db_employee:
-            errors1.append(f"No existe un empleado con esta ID {user_in.employee_id}.")
+    existence_checks = [
+        (crud_client, "client_id", "El cliente especificado no existe"),
+        (crud_employee, "employee_id", "El empleado especificado no existe"),
+    ]
 
-    if errors1:
+    errors404 = validate_exists_by_create(db, create_data, existence_checks)
+    if errors404:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=errors1,
+            detail=errors404
         )
-    
-    existing_username = crud_user.get_by_other(db, value=user_in.username, field="username")
-    if existing_username:
-        errors2.append("Ya existe un usuario registrado con ese nombre de usuario.")
 
-    existing_mail = crud_user.get_by_other(db, value=user_in.mail, field="mail")
-    if existing_mail:
-        errors2.append("Ya existe un usuario registrado con ese correo electrónico.")
+    unique_fields = [
+        ("username", "El nombre de usuario ya está en uso"),
+        ("mail", "El correo electrónico ya está en uso"),
+        ("client_id", "Este cliente ya tiene un usuario"),
+        ("employee_id", "Este empleado ya tiene un usuario"),
+    ]
 
-    if errors2:
+    errors_409 = validate_unique_fields_by_create(
+        db, 
+        crud_repo=crud_user, 
+        create_data=create_data, 
+        unique_fields=unique_fields
+    )
+
+    if errors_409:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=errors2,
+            status_code=status.HTTP_409_CONFLICT, 
+            detail=errors_409
         )
+
+    try:
+        db_user = crud_user.create(db, obj_in=create_data)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=["Ocurrió un conflicto al registrar el usuario (ej. username o email ya en uso)."]
+        )
+
+    log_action(
+        db,
+        user_id=current_user.id,
+        action="CREATE",
+        entity="users",
+        entity_id=db_user.id,
+        details=f"Usuario registrado: {db_user.username} (ID: {db_user.id})",
+    )
     
-    return crud_user.create(db, obj_in=user_in)
+    return db_user
 
 @router.patch("/{user_id}", response_model=UserResponse, dependencies=[Depends(require_roles(LEVEL_BASIC))])
 def update_user(user_id: int,user_in: UserUpdate,db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):

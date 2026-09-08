@@ -135,7 +135,7 @@ class SparePart(Base):
     component_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     brand: Mapped[Optional[str]] = mapped_column(String(100), nullable=True) 
     supplier: Mapped[Optional[str]] = mapped_column(String(100), nullable=True) 
-    stock: Mapped[int] = mapped_column(default=0)
+    stock: Mapped[Optional[int]] = mapped_column(default=None, nullable=True)
     price: Mapped[Optional[float]] = mapped_column(nullable=True)
 
     # Relationships

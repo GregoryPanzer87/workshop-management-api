@@ -203,7 +203,7 @@ class SparePartBase(BaseModel):
     component_type: str
     brand: EmptyStrToNone = None
     supplier: EmptyStrToNone = None
-    stock: int
+    stock: EmptyIntToNone = None
     price: EmptyFloatToNone = None
 
 class SparePartCreate(SparePartBase, ConfigCreate):
