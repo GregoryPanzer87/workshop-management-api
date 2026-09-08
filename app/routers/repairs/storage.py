@@ -54,6 +54,17 @@ def add_device_to_storage(
 
     try:
         db_storage = crud_storage.create(db, obj_in=storage_in)
+
+        log_action(
+            db,
+            user_id=current_user.id,
+            action="CREATE",
+            entity="storage",
+            entity_id=db_storage.id,
+            details=f"Equipo (ID: {db_storage.device_id}) ingresado al depósito",
+        )
+
+        db.commit()
     except IntegrityError:
         db.rollback()
         raise HTTPException(
@@ -61,16 +72,9 @@ def add_device_to_storage(
             detail=["Este equipo ya está en el depósito."]
         )
 
-    log_detail = f"Equipo (ID: {db_storage.device_id}) ingresado al depósito"
-
-    log_action(
-        db,
-        user_id=current_user.id,
-        action="CREATE",
-        entity="storage",
-        entity_id=db_storage.id,
-        details=log_detail,
-    )
+    except Exception as e:
+        db.rollback()
+        raise e
         
     return crud_storage.get_by_id(db, db_storage.id, options=STORAGE_LOAD_OPTIONS)
 
@@ -167,23 +171,27 @@ def update_storage_entry(
     )
 
     try: 
-        crud_storage.update(db, db_obj=db_storage, obj_in=storage_in)
+        crud_storage.update(db, db_obj=db_storage, obj_in=update_data)
+
+        if audit_details:
+            log_action(
+                db,
+                user_id=current_user.id,
+                action="UPDATE",
+                entity="storage",
+                entity_id=storage_id,
+                details=audit_details
+            )
+        db.commit()
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=["El equipo ya está en el depósito."]
         )
-
-    if audit_details:
-        log_action(
-            db,
-            user_id=current_user.id,
-            action="UPDATE",
-            entity="storage",
-            entity_id=storage_id,
-            details=audit_details
-        )
+    except Exception as e:
+        db.rollback()
+        raise e
 
     return crud_storage.get_by_id(db, id=storage_id, options=STORAGE_LOAD_OPTIONS)
 
@@ -208,20 +216,25 @@ def delete_storage_entry(
 
     try:
         crud_storage.delete(db, db_obj=db_storage)
+
+        log_action(
+            db,
+            user_id=current_user.id,
+            action="DELETE",
+            entity="storage",
+            entity_id=storage_id,
+            details=f"Retirado del depósito: {detail_msg}",
+        )
+
+        db.commit()
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=["No se puede retirar el registro del depósito debido a dependencias asociadas."]
         )
-
-    log_action(
-        db,
-        user_id=current_user.id,
-        action="DELETE",
-        entity="storage",
-        entity_id=storage_id,
-        details=f"Retirado del depósito: {detail_msg}",
-    )
+    except Exception as e:
+        db.rollback()
+        raise e
 
     return {"message": f"{detail_msg} eliminado correctamente del depósito"}
