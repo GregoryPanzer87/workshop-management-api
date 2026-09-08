@@ -39,21 +39,27 @@ def create_spare_part(
 
     try:
         db_spare_part = crud_spare_part.create(db, obj_in=spare_part_in)
+
+        log_action(
+                db,
+                user_id=current_user.id,
+                action="CREATE",
+                entity="spare_parts",
+                entity_id=db_spare_part.id,
+                details=f"Repuesto registrado: {db_spare_part.name} (ID: {db_spare_part.id})",
+            )
+
+        db.commit()
+        db.refresh(db_spare_part)
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=INTEGRITY_ERROR
         )
-
-    log_action(
-        db,
-        user_id=current_user.id,
-        action="CREATE",
-        entity="spare_parts",
-        entity_id=db_spare_part.id,
-        details=f"Repuesto registrado: {db_spare_part.name} (ID: {db_spare_part.id})",
-    )
+    except Exception as e:
+        db.rollback()
+        raise e
 
     return db_spare_part
 
@@ -137,22 +143,28 @@ def update_spare_part(
 
     try:
         db_spare_part = crud_spare_part.update(db, db_obj=db_spare_part, obj_in=update_data)
+
+        if audit_details:
+            log_action(
+                db,
+                user_id=current_user.id,
+                action="UPDATE",
+                entity="spare_parts",
+                entity_id=spare_part_id,
+                details=audit_details
+            )
+
+        db.commit()
+        db.refresh(db_spare_part)
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=INTEGRITY_ERROR
         )
-
-    if audit_details:
-        log_action(
-            db,
-            user_id=current_user.id,
-            action="UPDATE",
-            entity="spare_parts",
-            entity_id=spare_part_id,
-            details=audit_details
-        )
+    except Exception as e:
+        db.rollback()
+        raise e
 
     return db_spare_part
 
@@ -176,19 +188,25 @@ def delete_spare_part(
         )
     try:
         crud_spare_part.delete(db, db_obj=db_spare_part)
+
+        log_action(
+            db,
+            user_id=current_user.id,
+            action="DELETE",
+            entity="spare_parts",
+            entity_id=spare_part_id,
+            details=f"Repuesto eliminado: {db_spare_part.name} (ID: {db_spare_part.id})",
+        )
+
+        db.commit()
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=["No se puede eliminar el repuesto porque tiene órdenes de reparacion asociadas."]
         )
+    except Exception as e:
+        db.rollback()
+        raise e
 
-    log_action(
-        db,
-        user_id=current_user.id,
-        action="DELETE",
-        entity="spare_parts",
-        entity_id=spare_part_id,
-        details=f"Repuesto eliminado: {db_spare_part.name} (ID: {db_spare_part.id})",
-    )
     return {"message": f"Repuesto '{db_spare_part.name}' eliminado correctamente"}
