@@ -223,7 +223,7 @@ def delete_technician(employee_id: int, db: Session = Depends(get_db), current_u
         )
 
     try:
-        crud_employee.delete(db, db_employee)
+        crud_employee.deactivate(db, db_employee)
 
         log_action(
             db,

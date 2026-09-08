@@ -195,6 +195,11 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         db.flush()
 
         return db_obj
+
+    def deactivate(self, db: Session, db_obj: ModelType) -> Optional[ModelType]:
+        db_obj.is_active = False
+        db.flush()
+        return db_obj
         
 # =========================================================================
 # SPECIALIST CLASS (INHERITANCE CRUDBase)
@@ -213,7 +218,6 @@ class DeviceCRUD(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
 class RepairOrderCRUD(CRUDBase[RepairOrder, RepairOrderCreate, RepairOrderUpdate]):
     def delete(self, db: Session, db_obj: RepairOrder) -> RepairOrder:
         """Attempt to delete a order repair safely"""
-        # Validación defensiva si tiene ordenes asociadas
         if (
         (hasattr(db_obj, 'order_spare_parts') and db_obj.order_spare_parts) or 
         (hasattr(db_obj, 'order_services') and db_obj.order_services)
@@ -221,23 +225,6 @@ class RepairOrderCRUD(CRUDBase[RepairOrder, RepairOrderCreate, RepairOrderUpdate
             raise ValueError("No se puede eliminar una orden con repuestos o servicios realizados.")
                 
         db.delete(db_obj)
-        db.flush()
-        return db_obj
-
-# --- EMPLOYEE CRUD (LOGIC DELETE) ---
-class EmployeeCRUD(CRUDBase[EmployeeDirectory, EmployeeDirectoryCreate, EmployeeDirectoryUpdate]):
-    def delete(self, db: Session, db_obj: EmployeeDirectory) -> EmployeeDirectory:
-        """Deactivate an employee (is_active = False) instead of deleting it"""
-        db_obj.is_active = False
-        db.flush()
-        return db_obj
-
-
-# --- TECHNICIAN CRUD (JOIN) ---
-class TechnicianCRUD(CRUDBase[Technician, TechnicianCreate, TechnicianUpdate]):
-    def delete(self, db: Session, db_obj: Technician) -> Technician:
-        """Deactivate an technician (is_active = False) instead of deleting it"""
-        db_obj.is_active = False
         db.flush()
         return db_obj
 
@@ -269,8 +256,8 @@ crud_client = CRUDBase[Client, ClientCreate, ClientUpdate](Client)
 crud_device_type = CRUDBase[DeviceType, DeviceTypeCreate, DeviceTypeUpdate](DeviceType)
 crud_device_brand = CRUDBase[DeviceBrand, DeviceBrandCreate, DeviceBrandUpdate](DeviceBrand)
 crud_device = DeviceCRUD(Device)
-crud_employee = EmployeeCRUD(EmployeeDirectory)
-crud_technician = TechnicianCRUD(Technician)
+crud_employee = CRUDBase[EmployeeDirectory, EmployeeDirectoryCreate, EmployeeDirectoryUpdate](EmployeeDirectory)
+crud_technician = CRUDBase[Technician, TechnicianCreate, TechnicianUpdate](Technician)
 crud_repair_order = RepairOrderCRUD(RepairOrder)
 crud_spare_part = CRUDBase[SparePart, SparePartCreate, SparePartUpdate](SparePart)
 crud_order_spare_part = CRUDBase[OrderSparePart, OrderSparePartCreate, OrderSparePartUpdate](OrderSparePart)
