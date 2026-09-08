@@ -158,14 +158,14 @@ class OrderSparePart(Base):
 
     # Relationships
     repair_order: Mapped["RepairOrder"] = relationship("RepairOrder", back_populates="order_spare_parts")
-    spare_part: Mapped["SparePart"] = relationship("SparePart", back_populates="order_spare_parts")  # Corregido singular
+    spare_part: Mapped["SparePart"] = relationship("SparePart", back_populates="order_spare_parts")
 
 # =========================================================================
-# TABLE SERVICES TYPES
+# TABLE SERVICES
 # =========================================================================
 
-class ServiceType(Base):
-    __tablename__ = "service_types"
+class Service(Base):
+    __tablename__ = "service"
 
     # Table Columns
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
@@ -173,7 +173,7 @@ class ServiceType(Base):
     price: Mapped[Optional[float]] = mapped_column(nullable=True)
 
     # Relationships
-    order_services: Mapped[List["OrderService"]] = relationship("OrderService", back_populates="service_type")
+    order_services: Mapped[List["OrderService"]] = relationship("OrderService", back_populates="service")
 
 # =========================================================================
 # TABLE ORDER SERVICES
@@ -187,11 +187,11 @@ class OrderService(Base):
 
     # ForeignKeys
     repair_order_id: Mapped[int] = mapped_column(ForeignKey("repairs_orders.id"), nullable=False)
-    service_type_id: Mapped[int] = mapped_column(ForeignKey("service_types.id"), nullable=False)
+    services_id: Mapped[int] = mapped_column(ForeignKey("services.id"), nullable=False)
 
     # Relationships
     repair_order: Mapped["RepairOrder"] = relationship("RepairOrder", back_populates="order_services")
-    service_type: Mapped["ServiceType"] = relationship("ServiceType", back_populates="order_services")
+    services: Mapped["Service"] = relationship("Service", back_populates="order_services")
 
 # =========================================================================
 # TABLE STORAGE

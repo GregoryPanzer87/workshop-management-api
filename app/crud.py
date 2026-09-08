@@ -28,7 +28,7 @@ from app import (
     # Order Spare Part
     OrderSparePart, OrderSparePartCreate, OrderSparePartUpdate,
     # Service Type
-    ServiceType, ServiceTypeCreate, ServiceTypeUpdate,
+    Service, ServiceCreate, ServiceUpdate,
     # Order Service
     OrderService, OrderServiceCreate, OrderServiceUpdate,
     # Expense
@@ -283,7 +283,7 @@ crud_technician = TechnicianCRUD(Technician)
 crud_repair_order = RepairOrderCRUD(RepairOrder)
 crud_spare_part = CRUDBase[SparePart, SparePartCreate, SparePartUpdate](SparePart)
 crud_order_spare_part = CRUDBase[OrderSparePart, OrderSparePartCreate, OrderSparePartUpdate](OrderSparePart)
-crud_service_type = CRUDBase[ServiceType, ServiceTypeCreate, ServiceTypeUpdate](ServiceType)
+crud_services = CRUDBase[Service, ServiceCreate, ServiceUpdate](Service)
 crud_order_service = CRUDBase[OrderService, OrderServiceCreate, OrderServiceUpdate](OrderService)
 crud_expense = CRUDBase[Expense, ExpenseCreate, ExpenseUpdate](Expense)
 crud_attendance = CRUDBase[Attendance, AttendanceCreate, AttendanceUpdate](Attendance)

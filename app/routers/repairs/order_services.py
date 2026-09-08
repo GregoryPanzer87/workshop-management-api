@@ -7,8 +7,8 @@ from sqlalchemy.exc import IntegrityError
 from app import (
     OrderService, OrderServiceCreate,
     OrderServiceResponse, OrderServiceUpdate,
-    ServiceType, User,
-    crud_order_service, crud_service_type, crud_repair_order, get_db,
+    Service, User,
+    crud_order_service, crud_services, crud_repair_order, get_db,
 )
 from app.utils import build_audit_change_details
 from app.services import log_action
@@ -18,7 +18,7 @@ from app.core import LEVEL_ADVANCE, LEVEL_BASIC, LEVEL_MEDIUM
 router = APIRouter(prefix="/order_services", tags=["Order Services"])
 
 ORDER_SERVICES_LOAD_OPTIONS = [
-    joinedload(OrderService.service_type)
+    joinedload(OrderService.service)
 ]
 
 NOT_FOUND_SERVICE = ["El servicio especificado no existe."]
@@ -42,8 +42,8 @@ def create_order_service(
             detail=[f"La orden de reparación #{order_service_in.repair_order_id} no existe"],
         )
 
-    db_service_type = crud_service_type.get_by_id(db, id=order_service_in.service_type_id)
-    if not db_service_type:
+    db_service = crud_services.get_by_id(db, id=order_service_in.service_id)
+    if not db_service:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=NOT_FOUND_SERVICE,
@@ -52,12 +52,12 @@ def create_order_service(
     validation = crud_order_service.search_where_by_fields(
         db=db,
         repair_order_id=order_service_in.repair_order_id,
-        service_type_id=order_service_in.service_type_id,
+        service_id=order_service_in.service_id,
     )
     if validation:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, 
-            detail=[f"El servicio '{db_service_type.name}' ya se encuentra registrado en la orden #{order_service_in.repair_order_id}"]
+            detail=[f"El servicio '{db_service.name}' ya se encuentra registrado en la orden #{order_service_in.repair_order_id}"]
         )
     
     try:
@@ -69,7 +69,7 @@ def create_order_service(
             action="CREATE",
             entity="order_services",
             entity_id=db_order_service.id,
-            details=f"Servicio '{db_service_type.name}' agregado a la orden #{db_order_service.repair_order_id}",
+            details=f"Servicio '{db_service.name}' agregado a la orden #{db_order_service.repair_order_id}",
         )
 
         db.commit()
@@ -106,9 +106,9 @@ def read_order_services(
             query=q,
             search_fields=[
                 cast(OrderService.repair_order_id, String),
-                ServiceType.name
+                Service.name
             ],
-            joins=[ServiceType],
+            joins=[Service],
             options=ORDER_SERVICES_LOAD_OPTIONS,
             limit=limit,
         )
@@ -154,10 +154,10 @@ def update_order_service(
     if not update_data:
         return db_order_service
 
-    new_service_type_id = update_data.get("service_type_id")
-    if new_service_type_id and new_service_type_id != db_order_service.service_type_id:
-        db_service_type = crud_service_type.get_by_id(db, id=new_service_type_id)
-        if not db_service_type:
+    new_service_id = update_data.get("service_id")
+    if new_service_id and new_service_id != db_order_service.service_id:
+        db_service = crud_services.get_by_id(db, id=new_service_id)
+        if not db_service:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=NOT_FOUND_SERVICE,
@@ -166,12 +166,12 @@ def update_order_service(
         validation = crud_order_service.search_where_by_fields(
             db=db,
             repair_order_id=db_order_service.repair_order_id,
-            service_type_id=new_service_type_id,
+            service_id=new_service_id,
         )
         if validation:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=[f"El servicio '{db_service_type.name}' ya se encuentra registrado en la orden #{db_order_service.repair_order_id}"],
+                detail=[f"El servicio '{db_service.name}' ya se encuentra registrado en la orden #{db_order_service.repair_order_id}"],
             )
 
     audit_details = build_audit_change_details(
@@ -226,7 +226,8 @@ def delete_order_service(
             detail=NOT_FOUND_ORDER_SERVICE,
         )
     
-    service_type_name = db_order_service.service_type.name if db_order_service.service_type.name else f"ID {db_order_service.service_type_id}"
+    service_name = db_order_service.services.name if db_order_service.services.name else f"ID {db_order_service.services_id}"
+    repair_order_id = db_order_service.repair_order_id
 
     try:
         crud_order_service.delete(db, db_obj=db_order_service)
@@ -237,7 +238,7 @@ def delete_order_service(
             action="DELETE",
             entity="order_services",
             entity_id=order_service_id,
-            details=f"Servicio '{service_type_name}' eliminado de la orden #{db_order_service.repair_order_id}",
+            details=f"Servicio '{service_name}' eliminado de la orden #{repair_order_id}",
         )
 
         db.commit()
@@ -251,4 +252,4 @@ def delete_order_service(
         db.rollback()
         raise e
 
-    return {"message": f"Servicio '{service_type_name}' de la orden #{db_order_service.repair_order_id} eliminado correctamente"}
+    return {"message": f"Servicio '{service_name}' de la orden #{repair_order_id} eliminado correctamente"}

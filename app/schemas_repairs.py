@@ -247,20 +247,20 @@ class OrderSparePartUpdate(BaseModel):
     spare_part_id: EmptyIntToNone = None
 
 # =========================================================================
-#---------------------------------SERVICE TYPES----------------------------
+#---------------------------------SERVICE----------------------------
 # =========================================================================
 
-class ServiceTypeBase(BaseModel):
+class ServiceBase(BaseModel):
     name: str
     price: EmptyFloatToNone = None
 
-class ServiceTypeCreate(ServiceTypeBase, ConfigCreate):
+class ServiceCreate(ServiceBase, ConfigCreate):
     pass
 
-class ServiceTypeResponse(ConfigResponse, ServiceTypeBase):
+class ServiceResponse(ConfigResponse, ServiceBase):
     id: int
 
-class ServiceTypeUpdate(BaseModel):
+class ServiceUpdate(BaseModel):
     name: EmptyStrToNone = None
     price: EmptyFloatToNone = None
 
@@ -277,7 +277,7 @@ class OrderServiceCreate(OrderServiceBase, ConfigCreate):
 
 class OrderServiceResponse(ConfigResponse, OrderServiceBase):
     id: int
-    service_type: ServiceTypeResponse
+    service_type: ServiceResponse
 
 class OrderServiceUpdate(BaseModel):
     service_type_id: EmptyIntToNone = None
