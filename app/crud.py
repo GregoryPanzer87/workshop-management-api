@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import joinedload
 from app import (
     # Client
-    Client, ClientCreate, ClientUpdate,
+    Customer, CustomerCreate, CustomerUpdate,
     # Device Type
     DeviceType, DeviceTypeCreate, DeviceTypeUpdate,
     # Device Brand
@@ -210,7 +210,7 @@ class DeviceCRUD(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
     def update_owner(self, db: Session, device_id: int, new_client_id: int) -> Device:
         """Assign id_client to a new client without changes to the history"""
         db_device = self.get_by_id(db, id=device_id)
-        db_device.client_id = new_client_id
+        db_device.customer_id = new_client_id
         db.flush()
         return db_device
 
@@ -252,7 +252,7 @@ class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
 # 3. READY-TO-USE INSTANCES FOR MAIN
 # =========================================================================
 
-crud_client = CRUDBase[Client, ClientCreate, ClientUpdate](Client)
+crud_customer = CRUDBase[Customer, CustomerCreate, CustomerUpdate](Customer)
 crud_device_type = CRUDBase[DeviceType, DeviceTypeCreate, DeviceTypeUpdate](DeviceType)
 crud_device_brand = CRUDBase[DeviceBrand, DeviceBrandCreate, DeviceBrandUpdate](DeviceBrand)
 crud_device = DeviceCRUD(Device)

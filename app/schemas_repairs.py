@@ -16,31 +16,31 @@ class ConfigResponse():
     )
     
 # =========================================================================
-#---------------------------------CLIENTS----------------------------------
+#---------------------------------CUSTOMER---------------------------------
 # =========================================================================
 
-class ClientBase(BaseModel):
+class CustomerBase(BaseModel):
     national_id: EmptyStrToNone = None
     name: str
     phone_number: EmptyStrToNone = None
     email: EmptyEmailToNone = None
     short_address: EmptyStrToNone = None
 
-class ClientCreate(ClientBase, ConfigCreate):
+class CustomerCreate(CustomerBase, ConfigCreate):
     pass
 
-class ClientResponse(ConfigResponse, ClientBase):
+class CustomerResponse(ConfigResponse, CustomerBase):
     id: int
 
-class ClientMinResponse(ConfigResponse, BaseModel):
+class CustomerMinResponse(ConfigResponse, BaseModel):
     id: int
     name: str
 
-class OrderClientResponse(ClientMinResponse):
+class OrderCustomerResponse(CustomerMinResponse):
     national_id: EmptyStrToNone = None
     phone_number: EmptyStrToNone = None
 
-class ClientUpdate(BaseModel):
+class CustomerUpdate(BaseModel):
     national_id: EmptyStrToNone = None
     name: EmptyStrToNone = None
     phone_number: EmptyStrToNone = None
@@ -105,7 +105,7 @@ class DeviceBaseResponse(ConfigResponse, DeviceBase):
     description: EmptyStrToNone = None
 
 class DeviceResponse(DeviceBase):
-    client: ClientMinResponse
+    client: CustomerMinResponse
     device_type: DeviceTypeResponse
     device_brand: DeviceBrandResponse
 
@@ -173,12 +173,12 @@ class RepairOrderCreate(RepairOrderBase, ConfigCreate):
 
 class RepairOrderResponse(RepairOrderBase):
     id: int
-    client: Optional[OrderClientResponse] = None
+    client: Optional[OrderCustomerResponse] = None
     device: Optional[DeviceMinResponse] = None
     technician: Optional[TechnicianMinResponse] = None
 
 class RepairOrderDetailResponse(ConfigResponse, RepairOrderResponse):
-    client: ClientResponse
+    client: CustomerResponse
     device: DeviceResponse
     technician: TechnicianResponse
 

@@ -9,11 +9,11 @@ if TYPE_CHECKING:
     from app import EmployeeDirectory
 
 # =========================================================================
-# TABLE CLIENTS
+# TABLE CUSTOMERS
 # =========================================================================
 
-class Client(Base):
-    __tablename__ = "clients"
+class Customer(Base):
+    __tablename__ = "customers"
 
     # Table Columns
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
@@ -24,9 +24,9 @@ class Client(Base):
     short_address: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
 
     # Relationships
-    devices: Mapped[List["Device"]] = relationship("Device", back_populates="client")
-    repairs_orders: Mapped[List["RepairOrder"]] = relationship("RepairOrder", back_populates="client")
-    user: Mapped[Optional["User"]] = relationship("User", back_populates="client")
+    devices: Mapped[List["Device"]] = relationship("Device", back_populates="customer")
+    repairs_orders: Mapped[List["RepairOrder"]] = relationship("RepairOrder", back_populates="customer")
+    user: Mapped[Optional["User"]] = relationship("User", back_populates="customer")
 
 # =========================================================================
 # TABLES DEVICES
@@ -62,13 +62,13 @@ class Device(Base):
     serial_number: Mapped[Optional[str]] = mapped_column(String(50), unique=True, nullable=True)
     description: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
 
-    # ForeignKeys corregidas (device_types y device_brands en singular)
-    client_id: Mapped[int] = mapped_column(ForeignKey("clients.id"), nullable=False)
+    # ForeignKeys
+    customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"), nullable=False)
     device_type_id: Mapped[int] = mapped_column(ForeignKey("device_types.id"), nullable=False)
     device_brand_id: Mapped[int] = mapped_column(ForeignKey("device_brands.id"), nullable=False)
 
     # Relationships
-    client: Mapped["Client"] = relationship("Client", back_populates="devices")
+    customer: Mapped["Customer"] = relationship("Customer", back_populates="devices")
     device_type: Mapped["DeviceType"] = relationship("DeviceType", back_populates="devices")
     device_brand: Mapped["DeviceBrand"] = relationship("DeviceBrand", back_populates="devices")
     repairs_orders: Mapped[List["RepairOrder"]] = relationship("RepairOrder", back_populates="device")
@@ -111,12 +111,12 @@ class RepairOrder(Base):
     legacy_order_id: Mapped[Optional[int]] = mapped_column(nullable=True)
 
     # ForeignKeys
-    client_id: Mapped[int] = mapped_column(ForeignKey("clients.id"), nullable=False)
+    customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"), nullable=False)
     device_id: Mapped[int] = mapped_column(ForeignKey("devices.id"), nullable=False)
     technician_id: Mapped[int] = mapped_column(ForeignKey("technicians.id"), nullable=False)
 
     # Relationships
-    client: Mapped["Client"] = relationship("Client", back_populates="repairs_orders")
+    customer: Mapped["Customer"] = relationship("Customer", back_populates="repairs_orders")
     device: Mapped["Device"] = relationship("Device", back_populates="repairs_orders")
     order_spare_parts: Mapped[List["OrderSparePart"]] = relationship("OrderSparePart", back_populates="repair_order")
     order_services: Mapped[List["OrderService"]] = relationship("OrderService", back_populates="repair_order")
@@ -165,7 +165,7 @@ class OrderSparePart(Base):
 # =========================================================================
 
 class Service(Base):
-    __tablename__ = "service"
+    __tablename__ = "services"
 
     # Table Columns
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
@@ -173,7 +173,7 @@ class Service(Base):
     price: Mapped[Optional[float]] = mapped_column(nullable=True)
 
     # Relationships
-    order_services: Mapped[List["OrderService"]] = relationship("OrderService", back_populates="service")
+    order_services: Mapped[List["OrderService"]] = relationship("OrderService", back_populates="services")
 
 # =========================================================================
 # TABLE ORDER SERVICES

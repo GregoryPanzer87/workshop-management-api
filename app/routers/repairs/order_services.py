@@ -18,7 +18,7 @@ from app.core import LEVEL_ADVANCE, LEVEL_BASIC, LEVEL_MEDIUM
 router = APIRouter(prefix="/order_services", tags=["Order Services"])
 
 ORDER_SERVICES_LOAD_OPTIONS = [
-    joinedload(OrderService.service)
+    joinedload(OrderService.services)
 ]
 
 NOT_FOUND_SERVICE = ["El servicio especificado no existe."]

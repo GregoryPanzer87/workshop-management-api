@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app import (
     User, UserCreate, UserResponse, UserUpdate, 
-    crud_user, crud_client, crud_employee, get_db
+    crud_user, crud_customer, crud_employee, get_db
 )
 from app.utils import (
     build_audit_change_details, 
@@ -67,7 +67,7 @@ def create_user(
     create_data = user_in.model_dump(exclude_unset=True)
 
     existence_checks = [
-        (crud_client, "client_id", "El cliente especificado no existe"),
+        (crud_customer, "client_id", "El cliente especificado no existe"),
         (crud_employee, "employee_id", "El empleado especificado no existe"),
     ]
 
@@ -173,8 +173,8 @@ def update_user(
         return db_user
 
     new_client_id = update_data.get("client_id")
-    if new_client_id and new_client_id != db_user.client_id:
-        if not crud_client.get_by_id(db, id=new_client_id):
+    if new_client_id and new_client_id != db_user.customer_id:
+        if not crud_customer.get_by_id(db, id=new_client_id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=[f"No existe un cliente con la ID {new_client_id}."],

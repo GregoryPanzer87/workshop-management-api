@@ -67,13 +67,13 @@ class UserRole(str, Enum):
     OPERATOR = "Operator"
     TECHNICIAN = "Technician"
     BASE = "Base"
-    CLIENT = "Client"
+    CUSTOMER = "Customer"
 
 class UserBase(BaseModel):
     username: str
     is_active: bool = True
     mail: EmptyEmailToNone = None
-    role: Optional[UserRole] = UserRole.CLIENT
+    role: Optional[UserRole] = UserRole.CUSTOMER
     
     employee_id: EmptyIntToNone = None
     client_id: EmptyIntToNone = None
@@ -92,7 +92,7 @@ class UserUpdate(BaseModel):
     password: EmptyStrToNone = None
 
     employee_id: EmptyIntToNone = None
-    client_id: EmptyIntToNone = None
+    customer_id: EmptyIntToNone = None
     
 # =========================================================================
 #---------------------------------EXPENSE----------------------------------

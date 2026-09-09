@@ -8,8 +8,8 @@ from app.database import get_db
 from app import (
     RepairOrder, RepairOrderCreate, RepairOrderResponse, 
     RepairOrderDetailResponse, RepairOrderUpdate, 
-    User, Device, Client, crud_repair_order, 
-    crud_client, crud_device, crud_technician
+    User, Device, Customer, crud_repair_order, 
+    crud_customer, crud_device, crud_technician
 )
 from app.utils import (
     build_audit_change_details,
@@ -22,7 +22,7 @@ from app.core import LEVEL_BASIC, LEVEL_MEDIUM, LEVEL_ADVANCE
 router = APIRouter(prefix="/repairs_orders", tags=["Repairs Orders"])
 
 REPAIR_ORDER_LOAD_OPTIONS = [
-    joinedload(RepairOrder.client),
+    joinedload(RepairOrder.customer),
     joinedload(RepairOrder.device).joinedload(Device.device_type),
     joinedload(RepairOrder.device).joinedload(Device.device_brand),
 ]
@@ -41,7 +41,7 @@ def create_repair_order(repair_order_in: RepairOrderCreate, db: Session = Depend
             )
 
     existence_checks = [
-        (crud_client, "client_id", "El cliente especificado no existe"),
+        (crud_customer, "client_id", "El cliente especificado no existe"),
         (crud_device, "device_id", "El equipo especificado no existe"),
         (crud_technician, "technician_id", "El tecnico especificado no existe"),
     ]
@@ -96,15 +96,15 @@ def read_repairs_orders(
                            cast(RepairOrder.exit_date, String),
                            RepairOrder.status,
                            Device.serial_number,
-                           Client.name,
-                           Client.national_id
+                           Customer.name,
+                           Customer.national_id
             ],
-            joins=[Device, Client],
+            joins=[Device, Customer],
             options=REPAIR_ORDER_LOAD_OPTIONS,      
             limit=limit
         )
     if client_id is not None:
-        if not crud_client.get_by_id(db, client_id):
+        if not crud_customer.get_by_id(db, client_id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=["El cliente especificado no existe"]
@@ -172,7 +172,7 @@ def update_repair_order(repair_order_id: int, repair_order_in: RepairOrderUpdate
             )
     
     existence_checks = [
-        (crud_client, "client_id", "El cliente especificado no existe"),
+        (crud_customer, "client_id", "El cliente especificado no existe"),
         (crud_device, "device_id", "El equipo especificado no existe"),
         (crud_technician, "technician_id", "El técnico especificado no existe"),
     ]
@@ -234,7 +234,7 @@ def delete_repair_order(repair_order_id: int, db: Session = Depends(get_db), cur
             action="DELETE",
             entity="repair_orders",
             entity_id=repair_order_id,
-            details=f"Orden de reparación eliminada: #{repair_order_id} (ID de equipo: {db_repair_order.device_id}) (ID de cliente: {db_repair_order.client_id})",
+            details=f"Orden de reparación eliminada: #{repair_order_id} (ID de equipo: {db_repair_order.device_id}) (ID de cliente: {db_repair_order.customer_id})",
         )
 
         db.commit()

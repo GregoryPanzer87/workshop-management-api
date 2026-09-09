@@ -1,4 +1,4 @@
-from .clients import router as clients_router
+from .customers import router as customers_router
 from .devices import router as devices_router
 from .repair_order import router as repair_order_router
 from .device_types import router as device_types_router
@@ -11,7 +11,7 @@ from .technicians import router as technicians_router
 from .storage import router as storage_router
 
 __all__ = [
-    "clients_router",
+    "customers_router",
     "devices_router",
     "repair_order_router",
     "device_types_router",

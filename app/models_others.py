@@ -6,7 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app import Base
 
 if TYPE_CHECKING:
-    from app import Client, Technician
+    from app import Customer, Technician
 
 # =========================================================================
 # TABLE EMPLOYEE DIRECTORY
@@ -48,13 +48,13 @@ class User(Base):
     mail: Mapped[Optional[str]] = mapped_column(String(100), unique=True, nullable=True)
     role: Mapped[str] = mapped_column(String(60), nullable=False)
     
-    # Llaves foráneas opcionales
+    # ForaingKeys
     employee_id: Mapped[Optional[int]] = mapped_column(ForeignKey("employee_directory.id"), nullable=True)
-    client_id: Mapped[Optional[int]] = mapped_column(ForeignKey("clients.id"), nullable=True)
+    customer_id: Mapped[Optional[int]] = mapped_column(ForeignKey("customers.id"), nullable=True)
 
     # Relationships
     employee: Mapped[Optional["EmployeeDirectory"]] = relationship("EmployeeDirectory", back_populates="user")
-    client: Mapped[Optional["Client"]] = relationship("Client", back_populates="user")
+    customer: Mapped[Optional["Customer"]] = relationship("Customer", back_populates="user")
     logs: Mapped[List["AuditLog"]] = relationship("AuditLog", back_populates="user")
 
 # =========================================================================

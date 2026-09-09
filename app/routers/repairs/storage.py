@@ -18,7 +18,7 @@ from app.core import LEVEL_BASIC, LEVEL_MEDIUM, LEVEL_ADVANCE
 router = APIRouter(prefix="/storage", tags=["Storage"])
 
 STORAGE_LOAD_OPTIONS = [
-    joinedload(Storage.device).joinedload(Device.client),
+    joinedload(Storage.device).joinedload(Device.customer),
     joinedload(Storage.device).joinedload(Device.device_type),
     joinedload(Storage.device).joinedload(Device.device_brand),
 ]
@@ -211,7 +211,7 @@ def delete_storage_entry(
         )
 
     serial_number = db_storage.device.serial_number if db_storage.device else "N/A"
-    client_name = db_storage.device.client.name if (db_storage.device and db_storage.device.client) else "N/A"
+    client_name = db_storage.device.customer.name if (db_storage.device and db_storage.device.customer) else "N/A"
     detail_msg = f"Equipo de {client_name} (Serial: {serial_number})"
 
     try:

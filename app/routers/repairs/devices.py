@@ -7,9 +7,9 @@ from app import (
     DeviceType, DeviceBrand,
     Device, DeviceCreate, 
     DeviceResponse, DeviceUpdate, 
-    Client, User,
+    Customer, User,
     crud_device_type, crud_device_brand,
-    crud_device, crud_client, get_db
+    crud_device, crud_customer, get_db
 )
 from app.api.deps import get_current_user, require_roles
 from app.utils import (
@@ -20,7 +20,7 @@ from app.services import log_action
 from app.core import LEVEL_BASIC, LEVEL_MEDIUM
 
 DEVICE_LOAD_OPTIONS = [
-    joinedload(Device.client),
+    joinedload(Device.customer),
     joinedload(Device.device_type),
     joinedload(Device.device_brand),
 ]
@@ -39,7 +39,7 @@ def create_device(
     create_data = device_in.model_dump(exclude_unset=True)
 
     existence_checks = [
-        (crud_client, "client_id", "El cliente especificado no existe"),
+        (crud_customer, "client_id", "El cliente especificado no existe"),
         (crud_device_type, "device_type_id", "El tipo de equipo especificado no existe"),
         (crud_device_brand, "device_brand_id", "La marca de equipo especificada no existe"),
     ]
@@ -106,18 +106,18 @@ def read_devices(
             search_fields=[
                 DeviceType.name, 
                 DeviceBrand.name, 
-                Client.name,
-                Client.national_id,
+                Customer.name,
+                Customer.national_id,
                 Device.model, 
                 Device.serial_number
             ], 
-            joins=[Client, DeviceType, DeviceBrand],
+            joins=[Customer, DeviceType, DeviceBrand],
             options=DEVICE_LOAD_OPTIONS,
             limit=limit
         )
     
     if client_id is not None:
-        if not crud_client.get_by_id(db, client_id):
+        if not crud_customer.get_by_id(db, client_id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=["El cliente especificado no existe"]
@@ -264,27 +264,27 @@ def change_owner(
     current_user: User = Depends(get_current_user)
 ):
     """Transfers the ownership of a device to another client."""
-    db_device = crud_device.get_by_id(db=db, id=device_id, options=[joinedload(Device.client)])
+    db_device = crud_device.get_by_id(db=db, id=device_id, options=[joinedload(Device.customer)])
     if not db_device:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
             detail=NOT_FOUND_DEVICE
         )
 
-    if db_device.client_id == new_client_id:
+    if db_device.customer_id == new_client_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=["El equipo ya pertenece al cliente seleccionado"]
         )
 
-    new_client = crud_client.get_by_id(db, new_client_id)
+    new_client = crud_customer.get_by_id(db, new_client_id)
     if not new_client:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
             detail=["El nuevo cliente especificado no existe"]
         )
 
-    old_client_str = f"{db_device.client.name} (ID: {db_device.client.id})" if db_device.client else "Desconocido"
+    old_client_str = f"{db_device.customer.name} (ID: {db_device.customer.id})" if db_device.customer else "Desconocido"
     new_client_str = f"{new_client.name} (ID: {new_client.id})"
 
 
