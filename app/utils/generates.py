@@ -1,6 +1,6 @@
-import datetime
-import random
 import string
+import secrets
+from datetime import datetime
 from sqlalchemy.orm import Session
 from app import crud_device_type, crud_device, crud_employee, crud_user
 
@@ -30,23 +30,9 @@ def generate_device_type_prefix(type_name: str, db: Session) -> str:
         counter += 1
 
 def generate_custom_serial(db: Session, prefix: str = "INN") -> str:
-    """Generate an internal serial number for devices"""
-    now = datetime.datetime.now()
-    y, m, d = now.strftime("%y"), now.strftime("%m"), now.strftime("%d")
-
-    charset = string.ascii_uppercase + string.digits
-   
-    while True:
-        r1 = random.choice(charset)
-        r2 = "".join(random.choices(charset, k=2))
-        r3 = "".join(random.choices(charset, k=2))
-
-        serial_number = f"{prefix}{y}{r1}{m}-{r2}{d}{r3}"
-        existing_serial = crud_device.get_by_other(
-                db, value=serial_number, field="serial_number"
-            )
-        if not existing_serial:
-            return serial_number
+    """Generate a sequential internal serial number (e.g., SND-0042)"""
+    count = crud_device.count_by_prefix(db, prefix=prefix) + 1
+    return f"{prefix}-{count:05d}"
 
 def generate_employee_code(occupation: str, db: Session):
     """Generate an unique prefix by devices types"""

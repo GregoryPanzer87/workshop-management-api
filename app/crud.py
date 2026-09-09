@@ -5,9 +5,8 @@ from typing import (
     Dict, Sequence
 )
 from sqlalchemy.orm import Session
-from sqlalchemy import select, or_
+from sqlalchemy import select, func, or_
 from pydantic import BaseModel
-from sqlalchemy.orm import joinedload
 from app import (
     # Client
     Customer, CustomerCreate, CustomerUpdate,
@@ -141,7 +140,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         query: str, 
         search_fields: List[Any],
         joins: Optional[List[Any]] = None, 
-        options: Optional[List[Any]] = None,  # <- Agregamos options
+        options: Optional[List[Any]] = None,
         limit: int = 20
     ) -> List[ModelType]:
         """Search in tables by database with support for eager loading."""
@@ -213,6 +212,14 @@ class DeviceCRUD(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         db_device.customer_id = new_client_id
         db.flush()
         return db_device
+
+    def count_by_prefix(self, db: Session, prefix: str) -> int:
+        """Counts total devices that start with a specific serial prefix."""
+        stmt = (
+            select(func.count(Device.id))
+            .where(Device.serial_number.startswith(f"{prefix}-"))
+        )
+        return db.scalar(stmt) or 0
 
 # --- REPAIR ORDER CRUD (SAFE DELETE) ---
 class RepairOrderCRUD(CRUDBase[RepairOrder, RepairOrderCreate, RepairOrderUpdate]):

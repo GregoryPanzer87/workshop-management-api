@@ -146,9 +146,13 @@ def update_device_type(
     if not update_data:
         return db_device_type
 
+    new_name = update_data.get("name")
+    if new_name and "prefix" not in update_data:
+        update_data["prefix"] = generate_device_type_prefix(type_name=new_name, db=db)
+
     unique_fields = [
-        ("name", "El nombre del tipo de equipo ya esta en uso"),
-        ("prefix", "El prefijo ya esta en uso"),
+        ("name", "El nombre del tipo de equipo ya esta en uso."),
+        ("prefix", "El prefijo ya esta en uso."),
     ]
 
     errors_409 = validate_unique_fields_by_update(
