@@ -87,7 +87,7 @@ class DeviceBrandUpdate(BaseModel):
 # =========================================================================
 
 class DeviceBase(BaseModel):
-    client_id: int
+    customer_id: int
     model: str
     serial_number: EmptyStrToNone = None
     description: EmptyStrToNone = None
@@ -105,7 +105,7 @@ class DeviceBaseResponse(ConfigResponse, DeviceBase):
     description: EmptyStrToNone = None
 
 class DeviceResponse(DeviceBase):
-    client: CustomerMinResponse
+    customer: CustomerMinResponse
     device_type: DeviceTypeResponse
     device_brand: DeviceBrandResponse
 
@@ -143,7 +143,6 @@ class TechnicianMinResponse(ConfigResponse, BaseModel):
 
 class TechnicianUpdate(BaseModel):
     commission: EmptyIntToNone = None
-    is_active: EmptyBoolToNone = None
 
     employee_id: EmptyIntToNone = None
 
@@ -164,7 +163,7 @@ class RepairOrderBase(BaseModel):
     agreed_price: EmptyFloatToNone = None
     exit_date: EmptyDateToNone = None
 
-    client_id: int
+    customer_id: int
     device_id: int
     technician_id: int
 
@@ -173,12 +172,12 @@ class RepairOrderCreate(RepairOrderBase, ConfigCreate):
 
 class RepairOrderResponse(RepairOrderBase):
     id: int
-    client: Optional[OrderCustomerResponse] = None
+    customer: Optional[OrderCustomerResponse] = None
     device: Optional[DeviceMinResponse] = None
     technician: Optional[TechnicianMinResponse] = None
 
 class RepairOrderDetailResponse(ConfigResponse, RepairOrderResponse):
-    client: CustomerResponse
+    customer: CustomerResponse
     device: DeviceResponse
     technician: TechnicianResponse
 
@@ -190,7 +189,7 @@ class RepairOrderUpdate(BaseModel):
     exit_date: EmptyDateToNone = None
     legacy_order_id: EmptyIntToNone = None
 
-    client_id: EmptyIntToNone = None
+    customer_id: EmptyIntToNone = None
     device_id: EmptyIntToNone = None
     technician_id: EmptyIntToNone = None
 

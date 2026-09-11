@@ -152,6 +152,14 @@ def update_employee(
             detail=NOT_FOUND_EMPLOYEE
         )
 
+    is_admin = current_user.role in LEVEL_ADVANCE
+    
+    if not db_employee.is_active and not is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=["No tiene permisos para modificar este empleado porque está inactivo."]
+        )
+
     update_data = employee_in.model_dump(exclude_unset=True)
     if not update_data:
         return db_employee
@@ -212,14 +220,60 @@ def update_employee(
     
     return db_employee
 
+@router.patch("/{employee_id}/activate", response_model=EmployeeDirectoryResponse, dependencies=[Depends(require_roles(LEVEL_ADVANCE))])
+def activate_employee(
+    employee_id: int, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    """Reactivates a deactivated employee record."""
+    db_employee = crud_employee.get_by_id(db, id=employee_id)
+    if not db_employee:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=NOT_FOUND_EMPLOYEE,
+        )
+
+    if db_employee.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=["El técnico ya se encuentra activo."],
+        )
+
+    try:
+        db_employee = crud_employee.activate(db, db_obj=db_employee)
+
+        log_action(
+            db,
+            user_id=current_user.id,
+            action="ACTIVATE",
+            entity="employee_directory",
+            entity_id=employee_id,
+            details=f"Empleado reactivado: {db_employee.full_name} (ID: {employee_id})",
+        )
+
+        db.commit()
+        db.refresh(db_employee)
+    except Exception as e:
+        db.rollback()
+        raise e
+
+    return db_employee
+
 @router.delete("/{employee_id}", dependencies=[Depends(require_roles(LEVEL_ADVANCE))])
-def delete_technician(employee_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def delete_employee(employee_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Soft delete / Deactivate an employee."""
     db_employee = crud_employee.get_by_id(db, employee_id)
     if not db_employee:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=NOT_FOUND_EMPLOYEE,
+        )
+
+    if not db_employee.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=["El empleado ya se encuentra desactivado."],
         )
 
     try:

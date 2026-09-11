@@ -1,10 +1,6 @@
-import string
-import secrets
 from datetime import datetime
 from sqlalchemy.orm import Session
 from app import crud_device_type, crud_device, crud_employee, crud_user
-
-
 
 def generate_device_type_prefix(type_name: str, db: Session) -> str:
     """Genera un prefijo único de máximo 5 caracteres para tipos de dispositivo."""
@@ -36,7 +32,7 @@ def generate_custom_serial(db: Session, prefix: str = "INN") -> str:
 
 def generate_employee_code(occupation: str, db: Session):
     """Generate an unique prefix by devices types"""
-    now = datetime.datetime.now()
+    now = datetime.now()
     y = now.strftime("%y")
 
     parts = [p.strip().upper() for p in occupation.replace("-", " ").split() if p.strip()]
@@ -59,9 +55,7 @@ def generate_employee_code(occupation: str, db: Session):
 
 def generate_user_credentials(full_name: str, occupation: str, db: Session) -> dict:
     """Genera credenciales iniciales para el usuario basándose en su nombre y ocupación."""
-    now = datetime.datetime.now()
-    y = now.strftime("%y")
-    m = now.strftime("%m")
+    date_str = datetime.now().strftime("%y%m")
 
     names = [n.strip().lower() for n in full_name.replace("-", " ").split() if n.strip()]
     occ_parts = [o.strip().lower() for o in occupation.replace("-", " ").split() if o.strip()]
@@ -70,7 +64,7 @@ def generate_user_credentials(full_name: str, occupation: str, db: Session) -> d
     last_name = names[-1] if len(names) > 1 else "user"
     occ_prefix = occ_parts[0][:4] if occ_parts else "staff"
 
-    base_username = f"{occ_prefix}_{first_name[:4]}{last_name[:1]}.{m}"
+    base_username = f"{occ_prefix}_{first_name[:4]}{last_name[:1]}.{date_str[2:]}"
     username = base_username
     counter = 1
 
@@ -78,7 +72,7 @@ def generate_user_credentials(full_name: str, occupation: str, db: Session) -> d
         username = f"{base_username}{counter}"
         counter += 1
 
-    password = f"{first_name[:4].capitalize()}{last_name[:2].capitalize()}{y}{m}!"
+    password = f"{first_name[:4].capitalize()}{last_name[:2].capitalize()}{date_str}!"
 
     return {
         "username": username,

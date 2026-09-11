@@ -195,6 +195,11 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         return db_obj
 
+    def activate(self, db: Session, db_obj: ModelType) -> Optional[ModelType]:
+        db_obj.is_active = True
+        db.flush()
+        return db_obj
+
     def deactivate(self, db: Session, db_obj: ModelType) -> Optional[ModelType]:
         db_obj.is_active = False
         db.flush()

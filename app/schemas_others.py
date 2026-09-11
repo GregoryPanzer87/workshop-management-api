@@ -52,7 +52,6 @@ class EmployeeDirectoryUpdate(BaseModel):
     occupation: EmptyStrToNone = None
     employee_code: EmptyStrToNone = None
     entry_date: EmptyDateToNone = None
-    is_active: EmptyBoolToNone = None
     tax_id_doc: EmptyStrToNone = None
     national_id_doc: EmptyStrToNone = None
     profile_photo: EmptyStrToNone = None
@@ -86,7 +85,6 @@ class UserResponse(UserBase, ConfigResponse):
 
 class UserUpdate(BaseModel):
     username: EmptyStrToNone = None
-    is_active: EmptyBoolToNone = None
     mail: EmptyEmailToNone = None
     role: Optional[UserRole] = None
     password: EmptyStrToNone = None

@@ -70,6 +70,8 @@ def create_user(
         (crud_customer, "client_id", "El cliente especificado no existe"),
         (crud_employee, "employee_id", "El empleado especificado no existe"),
     ]
+    employee_id = create_data.get["employee_id"]
+    db_employee = crud_employee.get_by_id(db, employee_id)
 
     errors404 = validate_exists_by_create(db, create_data, existence_checks)
     if errors404:
@@ -243,6 +245,97 @@ def update_user(
 
     return crud_user.get_by_id(db, user_id)
 
+@router.patch("/{user_id}/activate", response_model=UserResponse, dependencies=[Depends(require_roles(LEVEL_ADVANCE))])
+def activate_technician(
+    user_id: int, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    """Reactivates a deactivated technician record."""
+    db_user = crud_user.get_by_id(db, id=user_id)
+    if not db_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=NOT_FOUND_USER,
+        )
+
+    if db_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=["El técnico ya se encuentra activo."],
+        )
+
+    if db_user.employee and not db_user.employee.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=["No se puede activar el usuario porque su empleado asociado está inactivo."],
+        )
+
+    try:
+        db_user = crud_user.activate(db, db_obj=db_user)
+
+        log_action(
+            db,
+            user_id=current_user.id,
+            action="ACTIVATE",
+            entity="users",
+            entity_id=user_id,
+            details=f"Técnico reactivado: (ID: {user_id})",
+        )
+
+        db.commit()
+        db.refresh(db_user)
+    except Exception as e:
+        db.rollback()
+        raise e
+
+    return db_user
+
+@router.patch("/{user_id}/activate", response_model=UserResponse, dependencies=[Depends(require_roles(LEVEL_ADVANCE))])
+def activate_technician(
+    user_id: int, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    """Reactivates a deactivated technician record."""
+    db_user = crud_user.get_by_id(db, id=user_id)
+    if not db_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=NOT_FOUND_USER,
+        )
+
+    if db_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=["El usuario ya se encuentra activo."],
+        )
+
+    if db_user.employee and not db_user.employee.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=["No se puede activar el usuario porque su empleado asociado está inactivo."],
+        )
+
+    try:
+        db_user = crud_user.activate(db, db_obj=db_user)
+
+        log_action(
+            db,
+            user_id=current_user.id,
+            action="ACTIVATE",
+            entity="users",
+            entity_id=user_id,
+            details=f"Usuario reactivado: (ID: {user_id})",
+        )
+
+        db.commit()
+        db.refresh(db_user)
+    except Exception as e:
+        db.rollback()
+        raise e
+
+    return db_user
 
 @router.delete("/{user_id}", dependencies=[Depends(require_roles(LEVEL_ADVANCE))])
 def delete_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):

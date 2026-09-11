@@ -39,7 +39,7 @@ def create_device(
     create_data = device_in.model_dump(exclude_unset=True)
 
     existence_checks = [
-        (crud_customer, "client_id", "El cliente especificado no existe"),
+        (crud_customer, "customer_id", "El cliente especificado no existe"),
         (crud_device_type, "device_type_id", "El tipo de equipo especificado no existe"),
         (crud_device_brand, "device_brand_id", "La marca de equipo especificada no existe"),
     ]
