@@ -108,10 +108,7 @@ def build_audit_change_details(
         return None
 
     changes_str = "; ".join(changes)
-    if entity_name == "Orden de Reparación":
-        details = f"{entity_name} #{db_obj.id} modificado: {changes_str}"
-    else:
-        details = f"{entity_name} (ID: {db_obj.id}) modificado: {changes_str}"
+    details = f"{entity_name} (ID: {db_obj.id}) modificado: {changes_str}"
 
     if len(details) > max_length:
         return details[: max_length - 3] + "..."

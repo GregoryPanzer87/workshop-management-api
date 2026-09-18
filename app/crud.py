@@ -5,7 +5,7 @@ from typing import (
     Dict, Sequence
 )
 from sqlalchemy.orm import Session
-from sqlalchemy import select, func, or_
+from sqlalchemy import select, func, or_, Integer
 from pydantic import BaseModel
 from app import (
     # Client
@@ -21,7 +21,7 @@ from app import (
     # Technician
     Technician, TechnicianCreate, TechnicianUpdate,
     # Repair Order
-    RepairOrder, RepairOrderCreate, RepairOrderUpdate,
+    RepairOrder, RepairOrderCreate, RepairOrderUpdate, RepairOrderUpdateStatus,
     # Spare Part
     SparePart, SparePartCreate, SparePartUpdate,
     # Order Spare Part
@@ -68,7 +68,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     #---------------------------------------------------------------------------------------
     
-    def get_by_other(self, db: Session, value: Any, field: str, options: Optional[Sequence[Any]] = None) -> Optional[ModelType]:
+    def get_by_other(self, db: Session, value: Any, field: Any, options: Optional[Sequence[Any]] = None) -> Optional[ModelType]:
         """Get a record by other values"""
         column = getattr(self.model, field)
         stmt = select(self.model).where(column == value)
@@ -80,13 +80,24 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     #---------------------------------------------------------------------------------------
 
-    def get_multi(self, db: Session, options: Optional[Sequence[Any]] = None, skip: int = 0, limit: int = 100) -> List[ModelType]:
-        """Retrieves a list of paginated records"""
-        stmt = select(self.model).offset(skip).limit(limit)
+    def get_multi(
+    self, 
+    db: Session, 
+    identities: Optional[Sequence[Any]] = None, 
+    options: Optional[Sequence[Any]] = None, 
+    skip: int = 0, 
+    limit: int = 100
+) -> List[ModelType]:
+        """Retrieves a list of paginated records or filter by a list of IDs."""
+        stmt = select(self.model)
+
+        if identities:
+            stmt = stmt.where(self.model.id.in_(identities))
 
         if options:
             stmt = stmt.options(*options)
 
+        stmt = stmt.offset(skip).limit(limit)
         return list(db.scalars(stmt).all())
 
     #---------------------------------------------------------------------------------------
@@ -141,7 +152,8 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         search_fields: List[Any],
         joins: Optional[List[Any]] = None, 
         options: Optional[List[Any]] = None,
-        limit: int = 20
+        limit: int = 20,
+        skip: int = 0
     ) -> List[ModelType]:
         """Search in tables by database with support for eager loading."""
         if not query or not query.strip():
@@ -164,7 +176,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             for option in options:
                 stmt = stmt.options(option)
 
-        stmt = stmt.where(or_(*filters)).distinct().limit(limit)
+        stmt = stmt.where(or_(*filters)).distinct().offset(skip).limit(limit)
         
         return list(db.scalars(stmt).all())
 
@@ -228,6 +240,12 @@ class DeviceCRUD(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
 
 # --- REPAIR ORDER CRUD (SAFE DELETE) ---
 class RepairOrderCRUD(CRUDBase[RepairOrder, RepairOrderCreate, RepairOrderUpdate]):
+    def status(self, db: Session, db_obj: RepairOrder, obj_in: RepairOrderUpdateStatus) -> RepairOrder:
+        """Update repair order status"""
+        db_obj.status = obj_in.status.value
+        db.flush()
+        return db_obj
+    
     def delete(self, db: Session, db_obj: RepairOrder) -> RepairOrder:
         """Attempt to delete a order repair safely"""
         if (
@@ -240,11 +258,26 @@ class RepairOrderCRUD(CRUDBase[RepairOrder, RepairOrderCreate, RepairOrderUpdate
         db.flush()
         return db_obj
 
+    def last_by_order_number(self, db: Session, year: str) -> Optional[str]:
+        """Retriever total order number that is year."""
+        seq_expr = func.cast(func.substr(RepairOrder.order_number, 4), Integer)
+
+        stmt = (
+            select(RepairOrder.order_number)
+            .where(
+                RepairOrder.order_number.like(f"{year}-%"),
+                RepairOrder.order_number.isnot(None)
+            )
+            .order_by(seq_expr.desc())
+            .limit(1)
+        )
+        return db.scalar(stmt)
+
 # --- USER CRUD ---
 class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
     def create(self, db: Session, *, obj_in: UserCreate) -> User:
         emp_id = obj_in.employee_id if obj_in.employee_id != 0 else None
-        cli_id = obj_in.client_id if obj_in.client_id != 0 else None
+        cust_id = obj_in.customer_id if obj_in.customer_id != 0 else None
 
         db_user = User(
             username=obj_in.username,
@@ -254,7 +287,7 @@ class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
             role=obj_in.role,
 
             employee_id=emp_id,
-            client_id=cli_id
+            custumer_id=cust_id
         )
         db.add(db_user)
         db.flush()

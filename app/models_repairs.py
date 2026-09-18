@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date
 from typing import List, Optional, TYPE_CHECKING
 from sqlalchemy import String, Date, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -84,7 +84,7 @@ class Technician(Base):
     # Table Columns
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    commission: Mapped[Optional[int]] = mapped_column(nullable=True)
+    commission: Mapped[Optional[float]] = mapped_column(nullable=True)
 
     # ForeignKeys
     employee_id: Mapped[Optional[int]] = mapped_column(ForeignKey("employee_directory.id"), unique=True, nullable=True)
@@ -103,12 +103,13 @@ class RepairOrder(Base):
 
     # Table Columns
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    entry_date: Mapped[datetime] = mapped_column(Date, nullable=False)
+    order_number: Mapped[str] = mapped_column(String(20), unique=True, index=True, nullable=True)
+    entry_date: Mapped[date] = mapped_column(Date, default=date.today, nullable=False)
     is_warranty: Mapped[bool] = mapped_column(default=False)
-    status: Mapped[Optional[str]] = mapped_column(String(30), nullable=False)
-    exit_date: Mapped[Optional[datetime]] = mapped_column(Date,nullable=True)
+    status: Mapped[str] = mapped_column(String(30), nullable=False)
+    exit_date: Mapped[Optional[date]] = mapped_column(Date,nullable=True)
     agreed_price: Mapped[Optional[float]] = mapped_column(nullable=True)
-    legacy_order_id: Mapped[Optional[int]] = mapped_column(nullable=True)
+    legacy_order_number: Mapped[Optional[str]] = mapped_column(String(6), nullable=True)
 
     # ForeignKeys
     customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"), nullable=False)
@@ -187,7 +188,7 @@ class OrderService(Base):
 
     # ForeignKeys
     repair_order_id: Mapped[int] = mapped_column(ForeignKey("repairs_orders.id"), nullable=False)
-    services_id: Mapped[int] = mapped_column(ForeignKey("services.id"), nullable=False)
+    service_id: Mapped[int] = mapped_column(ForeignKey("services.id"), nullable=False)
 
     # Relationships
     repair_order: Mapped["RepairOrder"] = relationship("RepairOrder", back_populates="order_services")
@@ -201,7 +202,7 @@ class Storage(Base):
     __tablename__ = "storage"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    entry_date: Mapped[datetime] = mapped_column(Date, nullable=False)
+    entry_date: Mapped[date] = mapped_column(Date, nullable=False)
     column: Mapped[str] = mapped_column(String(3), nullable=False)
 
     # ForeignKeys

@@ -14,15 +14,17 @@ from .models_others import (
 
 from .schemas_repairs import (
     # Clients
-    CustomerBase, CustomerCreate, CustomerResponse, CustomerUpdate, CustomerMinResponse,
+    CustomerBase, CustomerCreate, CustomerResponse, CustomerUpdate, CustomerMinResponse, OrderCustomerResponse,
     # Devices Types
     DeviceTypeBase, DeviceTypeCreate, DeviceTypeResponse, DeviceTypeUpdate,
     # Devices Brands
     DeviceBrandBase, DeviceBrandCreate, DeviceBrandResponse, DeviceBrandUpdate,
     # Devices
-    DeviceBase, DeviceCreate, DeviceResponse, DeviceUpdate, DeviceMinResponse,
+    DeviceBase, DeviceCreate, DeviceBaseResponse, DeviceResponse, DeviceUpdate, DeviceMinResponse,
     # Repair Orders
-    RepairOrderBase, RepairOrderCreate, RepairOrderResponse, RepairOrderDetailResponse, RepairOrderUpdate,
+    RepairOrderBase, RepairOrderCreate, RepairOrderBatchCreate, 
+    RepairOrderResponse, RepairOrderDetailResponse, RepairOrderUpdate,
+    RepairOrderUpdateStatus,
     # Technician
     TechnicianBase, TechnicianCreate, TechnicianResponse, TechnicianUpdate,
     # Spare Parts & Services

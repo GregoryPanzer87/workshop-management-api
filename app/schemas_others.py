@@ -75,7 +75,7 @@ class UserBase(BaseModel):
     role: Optional[UserRole] = UserRole.CUSTOMER
     
     employee_id: EmptyIntToNone = None
-    client_id: EmptyIntToNone = None
+    customer_id: EmptyIntToNone = None
 
 class UserCreate(UserBase, ConfigCreate):
     password: str

@@ -1,5 +1,5 @@
-from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from typing import Optional, List, Self
 from datetime import date
 from enum import Enum
 from app.config import EmptyEmailToNone, EmptyStrToNone, EmptyFloatToNone, EmptyIntToNone, EmptyBoolToNone, EmptyDateToNone
@@ -26,7 +26,7 @@ class CustomerBase(BaseModel):
     email: EmptyEmailToNone = None
     short_address: EmptyStrToNone = None
 
-class CustomerCreate(CustomerBase, ConfigCreate):
+class CustomerCreate(ConfigCreate, CustomerBase):
     pass
 
 class CustomerResponse(ConfigResponse, CustomerBase):
@@ -55,7 +55,7 @@ class DeviceTypeBase(BaseModel):
     name: str
     prefix: EmptyStrToNone = None
 
-class DeviceTypeCreate(DeviceTypeBase, ConfigCreate):
+class DeviceTypeCreate(ConfigCreate, DeviceTypeBase):
     pass
 
 class DeviceTypeResponse(ConfigResponse, DeviceTypeBase):
@@ -73,7 +73,7 @@ class DeviceTypeUpdate(BaseModel):
 class DeviceBrandBase(BaseModel):
     name: str
 
-class DeviceBrandCreate(DeviceBrandBase, ConfigCreate):
+class DeviceBrandCreate(ConfigCreate, DeviceBrandBase):
     pass
 
 class DeviceBrandResponse(ConfigResponse, DeviceBrandBase):
@@ -95,16 +95,13 @@ class DeviceBase(BaseModel):
     device_type_id: int
     device_brand_id: int
 
-class DeviceCreate(DeviceBase, ConfigCreate):
+class DeviceCreate(ConfigCreate, DeviceBase):
     pass
 
 class DeviceBaseResponse(ConfigResponse, DeviceBase):
     id: int
-    model: str
-    serial_number: EmptyStrToNone = None
-    description: EmptyStrToNone = None
 
-class DeviceResponse(DeviceBase):
+class DeviceResponse(DeviceBaseResponse):
     customer: CustomerMinResponse
     device_type: DeviceTypeResponse
     device_brand: DeviceBrandResponse
@@ -126,12 +123,12 @@ class DeviceUpdate(BaseModel):
 
 class TechnicianBase(BaseModel):
     name: EmptyStrToNone = None
-    commission: EmptyIntToNone = None
+    commission: EmptyFloatToNone = None
     is_active: bool = True
 
     employee_id: EmptyIntToNone = None
 
-class TechnicianCreate(TechnicianBase, ConfigCreate):
+class TechnicianCreate(ConfigCreate, TechnicianBase):
     pass
 
 class TechnicianResponse(ConfigResponse, TechnicianBase):
@@ -142,7 +139,7 @@ class TechnicianMinResponse(ConfigResponse, BaseModel):
     name: str
 
 class TechnicianUpdate(BaseModel):
-    commission: EmptyIntToNone = None
+    commission: EmptyFloatToNone = None
 
     employee_id: EmptyIntToNone = None
 
@@ -157,7 +154,8 @@ class StatusOrder(str, Enum):
     DELIVERED = "Entregado"
 
 class RepairOrderBase(BaseModel):
-    entry_date: date
+    entry_date: date = Field(default_factory=date.today)
+    legacy_order_number: EmptyStrToNone = None
     is_warranty: bool
     status: Optional[StatusOrder] = StatusOrder.PENDING
     agreed_price: EmptyFloatToNone = None
@@ -167,31 +165,43 @@ class RepairOrderBase(BaseModel):
     device_id: int
     technician_id: int
 
-class RepairOrderCreate(RepairOrderBase, ConfigCreate):
-    pass
+    @model_validator(mode='after')
+    def check_dates(self) -> Self:
+        if self.exit_date is not None and self.exit_date < self.entry_date:
+            raise ValueError('La fecha de salida no puede ser anterior a la fecha de entrada.')
+        return self
 
-class RepairOrderResponse(RepairOrderBase):
+class RepairOrderCreate(ConfigCreate, RepairOrderBase):
+    order_number: EmptyStrToNone = None
+
+class RepairOrderBatchCreate(BaseModel):
+    orders: List[RepairOrderCreate]
+
+class RepairOrderResponse(ConfigResponse,RepairOrderBase):
     id: int
+    order_number: EmptyStrToNone = None
     customer: Optional[OrderCustomerResponse] = None
     device: Optional[DeviceMinResponse] = None
     technician: Optional[TechnicianMinResponse] = None
 
-class RepairOrderDetailResponse(ConfigResponse, RepairOrderResponse):
+class RepairOrderDetailResponse(RepairOrderResponse):
     customer: CustomerResponse
     device: DeviceResponse
     technician: TechnicianResponse
 
 class RepairOrderUpdate(BaseModel):
+    legacy_order_number: EmptyStrToNone = None
     entry_date: EmptyDateToNone = None
     is_warranty: EmptyBoolToNone = None
-    status: Optional[StatusOrder] = None
     agreed_price: EmptyFloatToNone = None
     exit_date: EmptyDateToNone = None
-    legacy_order_id: EmptyIntToNone = None
 
     customer_id: EmptyIntToNone = None
     device_id: EmptyIntToNone = None
     technician_id: EmptyIntToNone = None
+
+class RepairOrderUpdateStatus(BaseModel):
+    status: StatusOrder
 
 # =========================================================================
 #---------------------------------SPARE PARTS------------------------------
@@ -205,7 +215,7 @@ class SparePartBase(BaseModel):
     stock: EmptyIntToNone = None
     price: EmptyFloatToNone = None
 
-class SparePartCreate(SparePartBase, ConfigCreate):
+class SparePartCreate(ConfigCreate, SparePartBase):
     pass
 
 class SparePartResponse(ConfigResponse, SparePartBase):
@@ -234,7 +244,7 @@ class OrderSparePartBase(BaseModel):
     repair_order_id: int
     spare_part_id: int
 
-class OrderSparePartCreate(OrderSparePartBase, ConfigCreate):
+class OrderSparePartCreate(ConfigCreate, OrderSparePartBase):
     pass
 
 class OrderSparePartResponse(ConfigResponse, OrderSparePartBase):
@@ -253,7 +263,7 @@ class ServiceBase(BaseModel):
     name: str
     price: EmptyFloatToNone = None
 
-class ServiceCreate(ServiceBase, ConfigCreate):
+class ServiceCreate(ConfigCreate, ServiceBase):
     pass
 
 class ServiceResponse(ConfigResponse, ServiceBase):
@@ -269,17 +279,17 @@ class ServiceUpdate(BaseModel):
 
 class OrderServiceBase(BaseModel):
     repair_order_id: int
-    service_type_id: int
+    service_id: int
 
-class OrderServiceCreate(OrderServiceBase, ConfigCreate):
+class OrderServiceCreate(ConfigCreate, OrderServiceBase):
     pass
 
 class OrderServiceResponse(ConfigResponse, OrderServiceBase):
     id: int
-    service_type: ServiceResponse
+    services: ServiceResponse
 
 class OrderServiceUpdate(BaseModel):
-    service_type_id: EmptyIntToNone = None
+    service_id: EmptyIntToNone = None
 
 # =========================================================================
 #----------------------------------STORAGE---------------------------------
@@ -291,7 +301,7 @@ class StorageBase(BaseModel):
 
     device_id: int
 
-class StorageCreate(StorageBase, ConfigCreate):
+class StorageCreate(ConfigCreate, StorageBase):
     pass
 
 class StorageResponse(ConfigResponse, StorageBase):
