@@ -41,6 +41,19 @@ def generate_custom_serial(db: Session, prefix: str = "INN") -> str:
     return f"{prefix}-{count:05d}"
 
 
+def generate_custom_serial_batch(
+    db: Session, count: int, prefix: str = "INN"
+) -> List[str]:
+    """Generate sequential internal serial numbers"""
+    base_count = crud_device.count_by_prefix(db, prefix=prefix)
+    generated_serial_numbers = []
+    for i in range(1, count + 1):
+        serial_number = f"{prefix}-{(base_count + i):05d}"
+        generated_serial_numbers.append(serial_number)
+
+    return generated_serial_numbers
+
+
 def generate_order_number(db: Session, target_date: Optional[date] = None) -> str:
     """Generate a sequential order number (e.g., 26-00069)"""
     ref_date = target_date or datetime.now().date()

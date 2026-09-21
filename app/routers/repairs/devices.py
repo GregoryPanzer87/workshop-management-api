@@ -1,11 +1,14 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import cast, String
 from sqlalchemy.exc import IntegrityError
+from collections import defaultdict
+
 
 from app import (
     DeviceType, DeviceBrand,
-    Device, DeviceCreate, 
+    Device, DeviceCreate, DeviceBatchCreate,
     DeviceResponse, DeviceUpdate, 
     Customer, User,
     crud_device_type, crud_device_brand,
@@ -13,7 +16,8 @@ from app import (
 )
 from app.api.deps import get_current_user, require_roles
 from app.utils import (
-    generate_custom_serial, build_audit_change_details,
+    generate_custom_serial, generate_custom_serial_batch,
+    build_audit_change_details,
     validate_exists_by_create, validate_exists_by_update
 )
 from app.services import log_action
@@ -89,10 +93,85 @@ def create_device(
 
     return crud_device.get_by_id(db, id=db_device.id, options=DEVICE_LOAD_OPTIONS)
 
+@router.post("/batch", response_model=List[DeviceResponse], status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_roles(LEVEL_MEDIUM))])
+def create_devices_batch(
+    batch_in: DeviceBatchCreate, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    """Create multiple device in a single atomic transaction."""
+    if not batch_in.devices:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=["La lista de órdenes de reparación no puede estar vacía."]
+        )
+
+    devices_data = [device_in.model_dump(exclude_unset=True) for device_in in batch_in.devices]
+
+    existence_checks = [
+        (crud_customer, "customer_id", "El cliente especificado no existe"),
+        (crud_device_type, "device_type_id", "El tipo de equipo especificado no existe"),
+        (crud_device_brand, "device_brand_id", "La marca de equipo especificada no existe"),
+    ]
+
+    for index, data in enumerate(devices_data):
+        errors_404 = validate_exists_by_create(db, data, existence_checks)
+        if errors_404:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=[f"Error en el elemento {index + 1}: {err}" for err in errors_404]
+            )
+
+    grouped_by_prefix = defaultdict(list)
+    for idx, item in enumerate(devices_data):
+        sn = item.get("serial_number")
+        if not sn or not str(sn).strip():
+            device_type_id_dt = item.get("device_type_id")
+            dev_type = crud_device_type.get_by_id(db, id=device_type_id_dt)
+            prefix_dt = dev_type.prefix if (dev_type and dev_type.prefix) else "INN"
+            grouped_by_prefix[prefix_dt].append(idx)
+
+    for target_prefix, indices in grouped_by_prefix.items():
+        generated_nums = generate_custom_serial_batch(db=db, count=len(indices), prefix=target_prefix)
+        for idx, gen_num in zip(indices, generated_nums):
+            devices_data[idx]["serial_number"] = gen_num
+
+    created_ids = []
+    try:
+        for data in devices_data:
+            db_device = crud_device.create(db, obj_in=data)
+            created_ids.append(db_device.id)
+
+            log_action(
+                db,
+                user_id=current_user.id,
+                action="CREATE",
+                entity="devices",
+                entity_id=db_device.id,
+                details=f"Equipo creado en lote: (ID: {db_device.id})",
+            )
+            db.refresh(db_device)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=["Ocurrió un conflicto al registrar el serial. Intente de nuevo."]
+        )
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=[str(e)]
+        )
+
+    db_devices = crud_device.get_multi(db=db, identities=created_ids, options=DEVICE_LOAD_OPTIONS)
+    return db_devices
+
 @router.get("/", response_model=List[DeviceResponse], dependencies=[Depends(require_roles(LEVEL_BASIC))])
 def read_devices(
     q: Optional[str] = None,
-    client_id: Optional[int] = None,
+    customer_id: Optional[int] = None,
     skip: int = 0, 
     limit: int = 20, 
     db: Session = Depends(get_db)
@@ -116,13 +195,13 @@ def read_devices(
             limit=limit
         )
     
-    if client_id is not None:
-        if not crud_customer.get_by_id(db, client_id):
+    if customer_id is not None:
+        if not crud_customer.get_by_id(db, customer_id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=["El cliente especificado no existe"]
             )
-        return crud_device.list_get_by_other(db=db, value=client_id, field="client_id", options=DEVICE_LOAD_OPTIONS, skip=skip, limit=limit)
+        return crud_device.list_get_by_other(db=db, value=customer_id, field="customer_id", options=DEVICE_LOAD_OPTIONS, skip=skip, limit=limit)
 
     return crud_device.get_multi(db, skip=skip, limit=limit, options=DEVICE_LOAD_OPTIONS)
 
@@ -256,10 +335,10 @@ def delete_device(device_id: int, db: Session = Depends(get_db), current_user: U
     
     return {"message": f"Equipo '{db_device.device_type.name}-{db_device.model}-{db_device.serial_number}' eliminado correctamente"}
 
-@router.patch("/{device_id}/transfer/{new_client_id}", response_model=DeviceResponse, dependencies=[Depends(require_roles(LEVEL_MEDIUM))])
+@router.patch("/{device_id}/transfer/{new_customer_id}", response_model=DeviceResponse, dependencies=[Depends(require_roles(LEVEL_MEDIUM))])
 def change_owner(
     device_id: int, 
-    new_client_id: int,
+    new_customer_id: int,
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
@@ -271,25 +350,25 @@ def change_owner(
             detail=NOT_FOUND_DEVICE
         )
 
-    if db_device.customer_id == new_client_id:
+    if db_device.customer_id == new_customer_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=["El equipo ya pertenece al cliente seleccionado"]
         )
 
-    new_client = crud_customer.get_by_id(db, new_client_id)
-    if not new_client:
+    new_customer = crud_customer.get_by_id(db, new_customer_id)
+    if not new_customer:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
             detail=["El nuevo cliente especificado no existe"]
         )
 
-    old_client_str = f"{db_device.customer.name} (ID: {db_device.customer.id})" if db_device.customer else "Desconocido"
-    new_client_str = f"{new_client.name} (ID: {new_client.id})"
+    old_customer_str = f"{db_device.customer.name} (ID: {db_device.customer.id})" if db_device.customer else "Desconocido"
+    new_customer_str = f"{new_customer.name} (ID: {new_customer.id})"
 
 
     try:
-        db_device = crud_device.update_owner(db, device_id=device_id, new_client_id=new_client_id)
+        db_device = crud_device.update_owner(db, device_id=device_id, new_customer_id=new_customer_id)
 
         log_action(
             db,
@@ -297,7 +376,7 @@ def change_owner(
             action="UPDATE",
             entity="devices",
             entity_id=device_id,
-            details=f"Transferencia de dueño del equipo (iD: {device_id}): De {old_client_str} a {new_client_str}",
+            details=f"Transferencia de dueño del equipo (iD: {device_id}): De {old_customer_str} a {new_customer_str}",
         )
 
         db.commit()

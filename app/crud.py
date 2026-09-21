@@ -287,7 +287,7 @@ class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
             role=obj_in.role,
 
             employee_id=emp_id,
-            custumer_id=cust_id
+            customer_id=cust_id
         )
         db.add(db_user)
         db.flush()
@@ -306,7 +306,7 @@ crud_technician = CRUDBase[Technician, TechnicianCreate, TechnicianUpdate](Techn
 crud_repair_order = RepairOrderCRUD(RepairOrder)
 crud_spare_part = CRUDBase[SparePart, SparePartCreate, SparePartUpdate](SparePart)
 crud_order_spare_part = CRUDBase[OrderSparePart, OrderSparePartCreate, OrderSparePartUpdate](OrderSparePart)
-crud_services = CRUDBase[Service, ServiceCreate, ServiceUpdate](Service)
+crud_service = CRUDBase[Service, ServiceCreate, ServiceUpdate](Service)
 crud_order_service = CRUDBase[OrderService, OrderServiceCreate, OrderServiceUpdate](OrderService)
 crud_expense = CRUDBase[Expense, ExpenseCreate, ExpenseUpdate](Expense)
 crud_attendance = CRUDBase[Attendance, AttendanceCreate, AttendanceUpdate](Attendance)

@@ -98,6 +98,9 @@ class DeviceBase(BaseModel):
 class DeviceCreate(ConfigCreate, DeviceBase):
     pass
 
+class DeviceBatchCreate(BaseModel):
+    devices: List[DeviceCreate]
+
 class DeviceBaseResponse(ConfigResponse, DeviceBase):
     id: int
 

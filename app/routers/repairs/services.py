@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from app import (
     Service, ServiceCreate,
     ServiceResponse, ServiceUpdate, User,
-    crud_services, get_db,
+    crud_service, get_db,
 )
 from app.api.deps import get_current_user, require_roles
 from app.utils import build_audit_change_details
@@ -32,14 +32,14 @@ def create_service(
     current_user: User = Depends(get_current_user)
 ):
     """Create a service in the database."""
-    if crud_services.get_by_other(db, value=service_in.name, field="name"):
+    if crud_service.get_by_other(db, value=service_in.name, field="name"):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=CONFLICT_SERVICE,
         )
 
     try:
-        db_service = crud_services.create(db, obj_in=service_in)
+        db_service = crud_service.create(db, obj_in=service_in)
 
         log_action(
             db,
@@ -79,13 +79,13 @@ def read_services(
     """Retrieves a paginated list of services or performs a real-time search by sending 'q'."""
     q = q.strip() if q else None
     if q:
-        return crud_services.search_ilike(
+        return crud_service.search_ilike(
             db=db,
             query=q,
             search_fields=[Service.name],
             limit=limit,
         )
-    return crud_services.get_multi(db, skip=skip, limit=limit)
+    return crud_service.get_multi(db, skip=skip, limit=limit)
 
 
 @router.get(
@@ -95,7 +95,7 @@ def read_services(
 )
 def read_service_by_id(service_id: int, db: Session = Depends(get_db)):
     """Retrieves a single service by ID."""
-    db_service = crud_services.get_by_id(db, id=service_id)
+    db_service = crud_service.get_by_id(db, id=service_id)
     if not db_service:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -116,7 +116,7 @@ def update_service(
     current_user: User = Depends(get_current_user),
 ):
     """Update a service partially or completely."""
-    db_service = crud_services.get_by_id(db, id=service_id)
+    db_service = crud_service.get_by_id(db, id=service_id)
     if not db_service:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -129,7 +129,7 @@ def update_service(
 
     new_name = update_data.get("name")
     if new_name and new_name != db_service.name:
-        val_name = crud_services.get_by_other(db, value=new_name, field="name")
+        val_name = crud_service.get_by_other(db, value=new_name, field="name")
         if val_name and val_name.id != service_id:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -143,7 +143,7 @@ def update_service(
     )
 
     try:
-        db_service = crud_services.update(db, db_obj=db_service, obj_in=update_data)
+        db_service = crud_service.update(db, db_obj=db_service, obj_in=update_data)
 
         if audit_details:
             log_action(
@@ -181,14 +181,14 @@ def delete_service(
     current_user: User = Depends(get_current_user)
 ):
     """Deletes a service by ID."""
-    db_service = crud_services.get_by_id(db, service_id)
+    db_service = crud_service.get_by_id(db, service_id)
     if not db_service:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=NOT_FOUND_SERVICE,
         )
     try:
-        crud_services.delete(db, db_obj=db_service)
+        crud_service.delete(db, db_obj=db_service)
 
         log_action(
             db,

@@ -8,7 +8,7 @@ from app import (
     OrderService, OrderServiceCreate,
     OrderServiceResponse, OrderServiceUpdate,
     Service, User,
-    crud_order_service, crud_services, crud_repair_order, get_db,
+    crud_order_service, crud_service, crud_repair_order, get_db,
 )
 from app.utils import build_audit_change_details
 from app.services import log_action
@@ -42,7 +42,7 @@ def create_order_service(
             detail=[f"La orden de reparación #{order_service_in.repair_order_id} no existe"],
         )
 
-    db_service = crud_services.get_by_id(db, id=order_service_in.service_id)
+    db_service = crud_service.get_by_id(db, id=order_service_in.service_id)
     if not db_service:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -156,7 +156,7 @@ def update_order_service(
 
     new_service_id = update_data.get("service_id")
     if new_service_id and new_service_id != db_order_service.service_id:
-        db_service = crud_services.get_by_id(db, id=new_service_id)
+        db_service = crud_service.get_by_id(db, id=new_service_id)
         if not db_service:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

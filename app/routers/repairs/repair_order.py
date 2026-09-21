@@ -108,7 +108,7 @@ def create_repair_orders_batch(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    """Crea múltiples órdenes de reparación en una sola transacción atómica."""
+    """Creates multiple repair orders in a single atomic transaction."""
     if not batch_in.orders:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -180,8 +180,8 @@ def create_repair_orders_batch(
                 entity_id=db_repair_order.id,
                 details=f"Orden creada en lote: (ID: {db_repair_order.id})",
             )
+            db.refresh(db_repair_order)
         db.commit()
-        db.refresh(db_repair_order)
     except IntegrityError:
         db.rollback()
         raise HTTPException(

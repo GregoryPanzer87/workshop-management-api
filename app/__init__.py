@@ -16,7 +16,7 @@ from .schemas_repairs import (
     # Clients
     CustomerBase, CustomerCreate, CustomerResponse, CustomerUpdate, CustomerMinResponse, OrderCustomerResponse,
     # Devices Types
-    DeviceTypeBase, DeviceTypeCreate, DeviceTypeResponse, DeviceTypeUpdate,
+    DeviceTypeBase, DeviceTypeCreate, DeviceBatchCreate, DeviceTypeResponse, DeviceTypeUpdate,
     # Devices Brands
     DeviceBrandBase, DeviceBrandCreate, DeviceBrandResponse, DeviceBrandUpdate,
     # Devices
@@ -52,7 +52,7 @@ from .schemas_others import (
 from .crud import (
     crud_customer, crud_device_type, crud_device_brand, crud_device, crud_employee, 
     crud_technician, crud_repair_order, crud_spare_part, crud_order_spare_part, 
-    crud_services, crud_order_service, crud_expense, crud_attendance,
+    crud_service, crud_order_service, crud_expense, crud_attendance,
     crud_user, crud_audit, crud_storage, ModelType, CRUDBase
 )
 

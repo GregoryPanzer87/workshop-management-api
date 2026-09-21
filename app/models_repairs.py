@@ -38,7 +38,7 @@ class DeviceType(Base):
     # Table Columns
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
-    prefix: Mapped[Optional[str]] = mapped_column(String(5), unique=True, nullable=True)
+    prefix: Mapped[Optional[str]] = mapped_column(String(5), max_length=5, unique=True, nullable=True)
     
     # Relationships
     devices: Mapped[List["Device"]] = relationship("Device", back_populates="device_type")
