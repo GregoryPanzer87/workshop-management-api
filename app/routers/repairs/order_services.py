@@ -6,8 +6,9 @@ from sqlalchemy.exc import IntegrityError
 
 from app import (
     OrderService, OrderServiceCreate,
+    OrderServiceBatchCreate,
     OrderServiceResponse, OrderServiceUpdate,
-    Service, User,
+    Service, User, RepairOrder,
     crud_order_service, crud_service, crud_repair_order, get_db,
 )
 from app.utils import build_audit_change_details
@@ -87,6 +88,105 @@ def create_order_service(
     return crud_order_service.get_by_id(db, db_order_service.id, options=ORDER_SERVICES_LOAD_OPTIONS)
 
 
+@router.post(
+    "/batch",
+    response_model=List[OrderServiceResponse],
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles(LEVEL_MEDIUM))],
+)
+def create_order_services_batch(
+    batch_in: OrderServiceBatchCreate, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    """Add multiple services to repair orders in a single atomic transaction."""
+    if not batch_in.order_services:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=["La lista de servicios no puede estar vacía."]
+        )
+
+    seen_pairs = set()
+    for index, item in enumerate(batch_in.order_services):
+        pair = (item.repair_order_id, item.service_id)
+        if pair in seen_pairs:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=[f"El elemento {index + 1} contiene un servicio duplicado dentro de la misma petición."]
+            )
+        seen_pairs.add(pair)
+
+    order_ids = list({item.repair_order_id for item in batch_in.order_services})
+    service_ids = list({item.service_id for item in batch_in.order_services})
+
+    existing_orders = crud_repair_order.get_multi(db, identities=order_ids, limit=len(order_ids))
+    existing_order_ids = {order.id for order in existing_orders}
+    
+    missing_orders = set(order_ids) - existing_order_ids
+    if missing_orders:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=[f"La(s) orden(es) de reparación con ID {list(missing_orders)} no existe(n)."]
+        )
+
+    existing_services = crud_service.get_multi(db, identities=service_ids, limit=len(service_ids))
+    service_cache = {srv.id: srv.name for srv in existing_services}
+
+    missing_services = set(service_ids) - set(service_cache.keys())
+    if missing_services:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=[f"El/Los servicio(s) con ID {list(missing_services)} no existe(n)."]
+        )
+
+    existing_pairs = crud_order_service.existing_batch(db=db, order_ids=order_ids)
+
+    for item in batch_in.order_services:
+        if (item.repair_order_id, item.service_id) in existing_pairs:
+            srv_name = service_cache.get(item.service_id, "Desconocido")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=[f"El servicio '{srv_name}' ya se encuentra registrado previamente en la orden (ID: {item.repair_order_id})."]
+            )
+
+    created_ids = []
+    try:
+        for item in batch_in.order_services:
+            db_order_service = crud_order_service.create(db, obj_in=item)
+            created_ids.append(db_order_service.id)
+
+            service_name = service_cache.get(item.service_id, "Desconocido")
+
+            log_action(
+                db,
+                user_id=current_user.id,
+                action="CREATE",
+                entity="order_services",
+                entity_id=db_order_service.id,
+                details=f"Servicio '{service_name}' agregado en lote a la orden (ID: {item.repair_order_id}).",
+            )
+            
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=["Ocurrió un conflicto de integridad al asociar los servicios a las órdenes."]
+        )
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=[str(e)]
+        )
+
+    return crud_order_service.get_multi(
+        db=db, 
+        identities=created_ids, 
+        limit=len(created_ids), 
+        options=ORDER_SERVICES_LOAD_OPTIONS
+    )
+
 @router.get(
     "/",
     response_model=List[OrderServiceResponse],
@@ -105,10 +205,11 @@ def read_order_services(
             db=db,
             query=q,
             search_fields=[
-                cast(OrderService.repair_order_id, String),
+                RepairOrder.order_number,
+                RepairOrder.legacy_order_number,
                 Service.name
             ],
-            joins=[Service],
+            joins=[RepairOrder, Service],
             options=ORDER_SERVICES_LOAD_OPTIONS,
             limit=limit,
         )

@@ -29,9 +29,9 @@ from .schemas_repairs import (
     TechnicianBase, TechnicianCreate, TechnicianResponse, TechnicianUpdate,
     # Spare Parts & Services
     SparePartBase, SparePartCreate, SparePartResponse, SparePartUpdate,
-    OrderSparePartBase, OrderSparePartCreate, OrderSparePartResponse, OrderSparePartUpdate,
+    OrderSparePartBase, OrderSparePartCreate, OrderSparePartBatchCreate, OrderSparePartResponse, OrderSparePartUpdate,
     ServiceBase, ServiceCreate, ServiceResponse, ServiceUpdate,
-    OrderServiceBase, OrderServiceCreate, OrderServiceResponse, OrderServiceUpdate,
+    OrderServiceBase, OrderServiceCreate, OrderServiceBatchCreate, OrderServiceResponse, OrderServiceUpdate,
     # Storage
     StorageBase, StorageCreate, StorageResponse, StorageUpdate
 )

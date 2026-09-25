@@ -250,6 +250,9 @@ class OrderSparePartBase(BaseModel):
 class OrderSparePartCreate(ConfigCreate, OrderSparePartBase):
     pass
 
+class OrderSparePartBatchCreate(BaseModel):
+    order_spare_parts: List[OrderSparePartCreate]
+
 class OrderSparePartResponse(ConfigResponse, OrderSparePartBase):
     id: int
     spare_part: SparePartBase
@@ -286,6 +289,9 @@ class OrderServiceBase(BaseModel):
 
 class OrderServiceCreate(ConfigCreate, OrderServiceBase):
     pass
+
+class OrderServiceBatchCreate(BaseModel):
+    order_services: List[OrderServiceCreate]
 
 class OrderServiceResponse(ConfigResponse, OrderServiceBase):
     id: int

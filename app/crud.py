@@ -273,6 +273,24 @@ class RepairOrderCRUD(CRUDBase[RepairOrder, RepairOrderCreate, RepairOrderUpdate
         )
         return db.scalar(stmt)
 
+
+# --- ORDER SPARE PART CRUD ---
+class OrderSparePartCRUD(CRUDBase[OrderSparePart, OrderSparePartCreate, OrderSparePartUpdate]):
+    def existing_batch(self, db: Session, order_ids: List[int]) -> set[tuple[int, int]]:
+        stmt = select(OrderSparePart.repair_order_id, OrderSparePart.spare_part_id).where(
+            OrderSparePart.repair_order_id.in_(order_ids)
+        )
+        return {(row.repair_order_id, row.spare_part_id) for row in db.execute(stmt)}
+
+
+# --- ORDER SERVICE CRUD ---
+class OrderServiceCRUD(CRUDBase[OrderService, OrderServiceCreate, OrderServiceUpdate]):
+    def existing_batch(self, db: Session, order_ids: List[int]) -> set[tuple[int, int]]:
+        stmt = select(OrderService.repair_order_id, OrderService.service_id).where(
+            OrderService.repair_order_id.in_(order_ids)
+        )
+        return {(row.repair_order_id, row.service_id) for row in db.execute(stmt)}
+
 # --- USER CRUD ---
 class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
     def create(self, db: Session, *, obj_in: UserCreate) -> User:
@@ -305,9 +323,9 @@ crud_employee = CRUDBase[EmployeeDirectory, EmployeeDirectoryCreate, EmployeeDir
 crud_technician = CRUDBase[Technician, TechnicianCreate, TechnicianUpdate](Technician)
 crud_repair_order = RepairOrderCRUD(RepairOrder)
 crud_spare_part = CRUDBase[SparePart, SparePartCreate, SparePartUpdate](SparePart)
-crud_order_spare_part = CRUDBase[OrderSparePart, OrderSparePartCreate, OrderSparePartUpdate](OrderSparePart)
+crud_order_spare_part = OrderSparePartCRUD(OrderSparePart)
 crud_service = CRUDBase[Service, ServiceCreate, ServiceUpdate](Service)
-crud_order_service = CRUDBase[OrderService, OrderServiceCreate, OrderServiceUpdate](OrderService)
+crud_order_service = OrderServiceCRUD(OrderService)
 crud_expense = CRUDBase[Expense, ExpenseCreate, ExpenseUpdate](Expense)
 crud_attendance = CRUDBase[Attendance, AttendanceCreate, AttendanceUpdate](Attendance)
 crud_user = UserCRUD(User)
