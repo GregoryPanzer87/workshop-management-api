@@ -9,7 +9,7 @@ from .models_repairs import (
 )
 
 from .models_others import (
-    EmployeeDirectory, User, AuditLog, Expense, Attendance
+    EmployeeDirectory, User, AuditLog, Expense, Attendance, ExchangeRate
 )
 
 from .schemas_repairs import (
@@ -46,14 +46,16 @@ from .schemas_others import (
     # Attendance
     AttendanceBase, AttendanceCreate, AttendanceResponse, AttendanceUpdate,
     # Audit Log
-    AuditLogBase, AuditLogCreate, AuditLogResponse, AuditLogUpdate
+    AuditLogBase, AuditLogCreate, AuditLogResponse, AuditLogUpdate,
+    # Exchange Rate
+    ExchangeRateBase, ExchangeRateCreate, ExchangeRateBatchCreate, ExchangeRateResponse, ExchangeRateUpdate
 )
 
 from .crud import (
     crud_customer, crud_device_type, crud_device_brand, crud_device, crud_employee, 
     crud_technician, crud_repair_order, crud_spare_part, crud_order_spare_part, 
     crud_service, crud_order_service, crud_expense, crud_attendance,
-    crud_user, crud_audit, crud_storage, ModelType, CRUDBase
+    crud_user, crud_audit, crud_storage, crud_exchange_rate, ModelType, CRUDBase
 )
 
 from .config import (

@@ -1,7 +1,7 @@
 # app/models_others.py
 from datetime import date, datetime, timezone
-from typing import List, Optional, TYPE_CHECKING
-from sqlalchemy import String, ForeignKey
+from typing import List, Optional, TYPE_CHECKING 
+from sqlalchemy import String, Date, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app import Base
 
@@ -23,7 +23,7 @@ class EmployeeDirectory(Base):
     short_address: Mapped[str] = mapped_column(String(30), nullable=False)
     occupation: Mapped[str] = mapped_column(String(50), nullable=False)
     employee_code: Mapped[Optional[str]] = mapped_column(String(15), nullable=True)
-    entry_date: Mapped[date] = mapped_column(nullable=False)
+    entry_date: Mapped[date] = mapped_column(Date, nullable=False)
     is_active: Mapped[bool] = mapped_column(default=True)
     tax_id_doc: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)
     national_id_doc: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)
@@ -71,7 +71,7 @@ class AuditLog(Base):
     entity: Mapped[str] = mapped_column(String(50), nullable=False)
     entity_id: Mapped[Optional[int]] = mapped_column(nullable=True)
     details: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="logs")
@@ -87,7 +87,7 @@ class Expense(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
     description: Mapped[str] = mapped_column(String(100), nullable=False)
     amount: Mapped[int] = mapped_column(nullable=False)
-    expense_date: Mapped[date] = mapped_column(nullable=False)
+    expense_date: Mapped[date] = mapped_column(Date, nullable=False)
     category: Mapped[str] = mapped_column(String(30), nullable=False)
 
 # =========================================================================
@@ -99,7 +99,7 @@ class Attendance(Base):
 
     # Table Columns
     id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
-    date_now: Mapped[date] = mapped_column(nullable=False)
+    date_now: Mapped[date] = mapped_column(Date, default=date.today, nullable=False)
     status: Mapped[str] = mapped_column(String(15), nullable=False)
 
     # ForeignKeys
@@ -107,3 +107,13 @@ class Attendance(Base):
 
     # Relationships
     employee: Mapped["EmployeeDirectory"] = relationship("EmployeeDirectory", back_populates="attendances")
+
+
+class ExchangeRate(Base):
+    __tablename__ = "exchange_rates"
+
+    # Table Columns
+    id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
+    rate_date: Mapped[date] = mapped_column(Date, default=date.today, nullable=False)
+    currency: Mapped[str] = mapped_column(String(5), nullable=False)
+    exchange: Mapped[float] = mapped_column(nullable=False)

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from typing import Optional, List
 from datetime import date, datetime
 from enum import Enum
 from app.config import EmptyEmailToNone, EmptyStrToNone, EmptyIntToNone, EmptyBoolToNone, EmptyDateToNone
@@ -162,4 +162,24 @@ class AuditLogResponse(AuditLogBase, ConfigResponse):
     created_at: datetime
 
 class AuditLogUpdate(BaseModel):
+    pass
+
+# =========================================================================
+#-----------------------------EXCHANGE RATES-------------------------------
+# =========================================================================
+
+class ExchangeRateBase(BaseModel):
+    currency: str
+    exchange: float
+
+class ExchangeRateCreate(ExchangeRateBase, ConfigCreate):
+    pass
+
+class ExchangeRateBatchCreate(BaseModel, ConfigCreate):
+    exchange_rates: List[ExchangeRateCreate]
+
+class ExchangeRateResponse(ExchangeRateBase, ConfigResponse):
+    id: int
+
+class ExchangeRateUpdate(BaseModel):
     pass

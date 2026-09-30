@@ -40,6 +40,8 @@ from app import (
     AuditLog, AuditLogCreate, AuditLogUpdate,
     #Storage
     Storage, StorageCreate, StorageUpdate,
+
+    ExchangeRate, ExchangeRateCreate, ExchangeRateUpdate
     )
 from app.core.security import get_password_hash
 
@@ -331,3 +333,4 @@ crud_attendance = CRUDBase[Attendance, AttendanceCreate, AttendanceUpdate](Atten
 crud_user = UserCRUD(User)
 crud_audit = CRUDBase[AuditLog, AuditLogCreate, AuditLogUpdate](AuditLog)
 crud_storage = CRUDBase[Storage, StorageCreate, StorageUpdate](Storage)
+crud_exchange_rate = CRUDBase[ExchangeRate, ExchangeRateCreate, ExchangeRateUpdate](ExchangeRate)

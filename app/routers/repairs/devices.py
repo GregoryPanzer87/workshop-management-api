@@ -150,7 +150,6 @@ def create_devices_batch(
                 entity_id=db_device.id,
                 details=f"Equipo creado en lote: (ID: {db_device.id})",
             )
-            db.refresh(db_device)
         db.commit()
     except IntegrityError:
         db.rollback()
