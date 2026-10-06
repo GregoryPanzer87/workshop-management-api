@@ -225,6 +225,7 @@ def read_order_spare_parts(
             joins=[RepairOrder, SparePart],
             options=ORDER_SPARE_PARTS_LOAD_OPTIONS,
             limit=limit,
+            skip=skip
         )
     return crud_order_spare_part.get_multi(db, options=ORDER_SPARE_PARTS_LOAD_OPTIONS, skip=skip, limit=limit)
 

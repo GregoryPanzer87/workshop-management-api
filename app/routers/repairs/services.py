@@ -84,6 +84,7 @@ def read_services(
             query=q,
             search_fields=[Service.name],
             limit=limit,
+            skip=skip
         )
     return crud_service.get_multi(db, skip=skip, limit=limit)
 

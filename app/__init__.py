@@ -24,7 +24,7 @@ from .schemas_repairs import (
     # Repair Orders
     RepairOrderBase, RepairOrderCreate, RepairOrderBatchCreate, 
     RepairOrderResponse, RepairOrderDetailResponse, RepairOrderUpdate,
-    RepairOrderUpdateStatus,
+    RepairOrderUpdateStatus, RepairOrderUpdateDescription,
     # Technician
     TechnicianBase, TechnicianCreate, TechnicianResponse, TechnicianUpdate,
     # Spare Parts & Services
@@ -38,7 +38,7 @@ from .schemas_repairs import (
 
 from .schemas_others import (
     # Users
-    UserRole, UserBase, UserCreate, UserResponse, UserUpdate,
+    UserRole, UserBase, UserCreate, UserResponse, UserLowResponse, UserUpdate,
     # Employee Directory
     EmployeeDirectoryBase, EmployeeDirectoryCreate, EmployeeDirectoryResponse, EmployeeDirectoryUpdate,
     # Expense

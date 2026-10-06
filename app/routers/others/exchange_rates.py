@@ -32,10 +32,13 @@ def create_exchange_rates(exchange_rate_in: ExchangeRateBatchCreate, db: Session
     date_now = date.today()
 
     for dt in exchange_rate_in.exchange_rates:
+        if not dt.rate_date:
+            dt.rate_date = date_now
+
         db_exchange_rate = crud_exchange_rate.search_where_by_fields(
             db=db, 
             currency=dt.currency, 
-            rate_date=date_now
+            rate_date=dt.rate_date
         )
         if db_exchange_rate:
             errors_409.append(f"La tasa para la divisa '{dt.currency}' ya se encuentra registrada para el día de hoy.")
@@ -49,6 +52,8 @@ def create_exchange_rates(exchange_rate_in: ExchangeRateBatchCreate, db: Session
     created_ids = []
     try:
         for dt in exchange_rate_in.exchange_rates:
+            if not dt.rate_date:
+                dt.rate_date = date_now
             db_exchange_rate = crud_exchange_rate.create(db, obj_in=dt)
             created_ids.append(db_exchange_rate.id)
         db.commit()
@@ -84,7 +89,8 @@ def read_exchange_rates(
                 cast(ExchangeRate.exchange, String), 
                 ExchangeRate.currency
             ], 
-            limit=limit
+            limit=limit,
+            skip=skip
         )
     return crud_exchange_rate.get_multi(db, skip=skip, limit=limit)
 

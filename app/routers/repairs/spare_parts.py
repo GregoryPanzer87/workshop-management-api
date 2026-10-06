@@ -83,6 +83,7 @@ def read_spare_part(
             query=q,
             search_fields=[SparePart.name],
             limit=limit,
+            skip=skip
         )
     return crud_spare_part.get_multi(db, skip=skip, limit=limit)
 

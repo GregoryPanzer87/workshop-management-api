@@ -82,6 +82,7 @@ def read_devices_brands(
             query=q,
             search_fields=[DeviceBrand.name],
             limit=limit,
+            skip=skip
         )
     return crud_device_brand.get_multi(db, skip=skip, limit=limit)
 

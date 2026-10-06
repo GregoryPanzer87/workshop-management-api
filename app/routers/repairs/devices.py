@@ -191,7 +191,8 @@ def read_devices(
             ], 
             joins=[Customer, DeviceType, DeviceBrand],
             options=DEVICE_LOAD_OPTIONS,
-            limit=limit
+            limit=limit,
+            skip=skip
         )
     
     if customer_id is not None:

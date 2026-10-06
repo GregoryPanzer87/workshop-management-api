@@ -27,7 +27,8 @@ def read_audit_log(
                 AuditLog.entity, 
                 AuditLog.details
             ], 
-            limit=limit
+            limit=limit,
+            skip=skip
         )
     return crud_audit.get_multi(db, skip=skip, limit=limit)
 

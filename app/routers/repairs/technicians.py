@@ -108,7 +108,8 @@ def read_technicians(
                 EmployeeDirectory.employee_code
             ],
             joins=[EmployeeDirectory],
-            limit=limit
+            limit=limit,
+            skip=skip
         )
     return crud_technician.get_multi(db, skip=skip, limit=limit)
 

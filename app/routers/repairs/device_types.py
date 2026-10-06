@@ -103,6 +103,7 @@ def read_devices_types(
             query=q,
             search_fields=[DeviceType.name, DeviceType.prefix],
             limit=limit,
+            skip=skip
         )
     return crud_device_type.get_multi(db, skip=skip, limit=limit)
 

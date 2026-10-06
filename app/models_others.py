@@ -51,10 +51,12 @@ class User(Base):
     # ForaingKeys
     employee_id: Mapped[Optional[int]] = mapped_column(ForeignKey("employee_directory.id"), nullable=True)
     customer_id: Mapped[Optional[int]] = mapped_column(ForeignKey("customers.id"), nullable=True)
+    technician_id: Mapped[Optional[int]] = mapped_column(ForeignKey("technicians.id"), nullable=True)
 
     # Relationships
     employee: Mapped[Optional["EmployeeDirectory"]] = relationship("EmployeeDirectory", back_populates="user")
     customer: Mapped[Optional["Customer"]] = relationship("Customer", back_populates="user")
+    technician: Mapped[Optional["Technician"]] = relationship("Technician", uselist=False)
     logs: Mapped[List["AuditLog"]] = relationship("AuditLog", back_populates="user")
 
 # =========================================================================
@@ -71,7 +73,7 @@ class AuditLog(Base):
     entity: Mapped[str] = mapped_column(String(50), nullable=False)
     entity_id: Mapped[Optional[int]] = mapped_column(nullable=True)
     details: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="logs")

@@ -212,6 +212,7 @@ def read_order_services(
             joins=[RepairOrder, Service],
             options=ORDER_SERVICES_LOAD_OPTIONS,
             limit=limit,
+            skip=skip
         )
     return crud_order_service.get_multi(db, options=ORDER_SERVICES_LOAD_OPTIONS, skip=skip, limit=limit)
 

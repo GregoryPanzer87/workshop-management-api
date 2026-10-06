@@ -96,6 +96,7 @@ def read_storage_entries(
             joins=[Device],
             options=STORAGE_LOAD_OPTIONS,
             limit=limit,
+            skip=skip
         )
     return crud_storage.get_multi(db, options=STORAGE_LOAD_OPTIONS, skip=skip, limit=limit)
 

@@ -1,9 +1,11 @@
 from .auth import router as auth_router
 from .employee_directory import router as employee_directory_router
 from .audit_log import router as audit_log_router
+from .exchange_rates import router as exchange_rates_router
 
 __all__ = [
     "auth_router",
     "employee_directory_router",
-    "audit_log_router"
+    "audit_log_router",
+    "exchange_rates_router"
 ]

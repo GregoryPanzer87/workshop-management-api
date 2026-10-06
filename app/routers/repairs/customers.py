@@ -82,7 +82,8 @@ def read_customers(
             db=db, 
             query=q, 
             search_fields=[Customer.name, cast(Customer.national_id, String), Customer.phone_number, Customer.short_address], 
-            limit=limit
+            limit=limit,
+            skip=skip
         )
     return crud_customer.get_multi(db, skip=skip, limit=limit)
 

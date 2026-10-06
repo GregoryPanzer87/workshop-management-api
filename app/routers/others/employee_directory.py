@@ -111,7 +111,8 @@ def read_employees(
                 EmployeeDirectory.full_name, EmployeeDirectory.tax_id, EmployeeDirectory.national_id,
                 EmployeeDirectory.short_address
             ], 
-            limit=limit
+            limit=limit,
+            skip=skip
         )
     return crud_employee.get_multi(db, skip=skip, limit=limit)
 
