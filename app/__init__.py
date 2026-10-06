@@ -24,7 +24,7 @@ from .schemas_repairs import (
     # Repair Orders
     RepairOrderBase, RepairOrderCreate, RepairOrderBatchCreate, 
     RepairOrderResponse, RepairOrderDetailResponse, RepairOrderUpdate,
-    RepairOrderUpdateStatus, RepairOrderUpdateDescription,
+    RepairOrderUpdateStatus, RepairOrderUpdateDescription, RepairOrderUpdateTechnician,
     # Technician
     TechnicianBase, TechnicianCreate, TechnicianResponse, TechnicianUpdate,
     # Spare Parts & Services

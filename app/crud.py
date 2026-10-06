@@ -21,7 +21,8 @@ from app import (
     # Technician
     Technician, TechnicianCreate, TechnicianUpdate,
     # Repair Order
-    RepairOrder, RepairOrderCreate, RepairOrderUpdate, RepairOrderUpdateStatus, RepairOrderUpdateDescription,
+    RepairOrder, RepairOrderCreate, RepairOrderUpdate, 
+    RepairOrderUpdateStatus, RepairOrderUpdateDescription, RepairOrderUpdateTechnician,
     # Spare Part
     SparePart, SparePartCreate, SparePartUpdate,
     # Order Spare Part
@@ -258,6 +259,17 @@ class RepairOrderCRUD(CRUDBase[RepairOrder, RepairOrderCreate, RepairOrderUpdate
     ) -> RepairOrder:
         """Update repair order description."""
         db_obj.description = obj_in.description.strip() if obj_in.description else None
+        db.flush()
+        return db_obj
+
+    def technician(
+        self, 
+        db: Session, 
+        db_obj: RepairOrder, 
+        obj_in: RepairOrderUpdateTechnician
+    ) -> RepairOrder:
+        """Update repair order technician assigning."""
+        db_obj.technician_id = obj_in.technician_id
         db.flush()
         return db_obj
     

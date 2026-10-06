@@ -10,7 +10,7 @@ from app import (
     RepairOrder, RepairOrderCreate, RepairOrderResponse, 
     RepairOrderDetailResponse, RepairOrderUpdate, 
     RepairOrderUpdateStatus, RepairOrderBatchCreate, 
-    RepairOrderUpdateDescription, UserRole,
+    RepairOrderUpdateDescription, RepairOrderUpdateTechnician, UserRole,
     User, Device, Customer, Technician,
     crud_repair_order, crud_customer, crud_device, crud_technician
 )
@@ -339,7 +339,6 @@ def update_repair_order(repair_order_id: int, repair_order_in: RepairOrderUpdate
     existence_checks = [
         (crud_customer, "customer_id", "El cliente especificado no existe"),
         (crud_device, "device_id", "El equipo especificado no existe"),
-        (crud_technician, "technician_id", "El técnico especificado no existe"),
     ]
 
     errors_404 = validate_exists_by_update(db, update_data, existence_checks)
@@ -501,6 +500,65 @@ def update_repair_order_description(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=["Ocurrió un conflicto al actualizar la descripción de la orden."],
+        )
+    except Exception as e:
+        db.rollback()
+        raise e
+
+    return crud_repair_order.get_by_id(
+        db, repair_order_id, options=REPAIR_ORDER_LOAD_OPTIONS
+    )
+
+@router.patch(
+    "/technician/{repair_order_id}",
+    response_model=RepairOrderResponse,
+    dependencies=[Depends(require_roles(LEVEL_MEDIUM))],
+)
+def update_repair_order_technician(
+    repair_order_id: int,
+    technician_in: RepairOrderUpdateTechnician,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Assigns or updates a technician to the order directly."""
+    db_repair_order = crud_repair_order.get_by_id(
+        db, id=repair_order_id, options=REPAIR_ORDER_LOAD_OPTIONS
+    )
+    if not db_repair_order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=NOT_FOUND_REPAIR_ORDER,
+        )
+
+    old_technician = db_repair_order.technician_id
+    new_technician = technician_in.technician_id
+
+    if old_technician == new_technician:
+        return db_repair_order
+
+    try:
+        crud_repair_order.technician(db, db_obj=db_repair_order, obj_in=technician_in)
+
+        audit_detail = (
+            f"Técnico asignado actualizado en la orden #{db_repair_order.order_number or repair_order_id} "
+            f"(Técnico ID: {old_technician} -> {new_technician})"
+        )
+        log_action(
+            db,
+            user_id=current_user.id,
+            action="UPDATE",
+            entity="repair_orders",
+            entity_id=repair_order_id,
+            details=audit_detail[:255],
+        )
+
+        db.commit()
+        db.refresh(db_repair_order)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=["Ocurrió un conflicto al actualizar el técnico de la orden."],
         )
     except Exception as e:
         db.rollback()

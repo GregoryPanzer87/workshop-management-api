@@ -151,6 +151,7 @@ class TechnicianUpdate(BaseModel):
 # =========================================================================
 
 class StatusOrder(str, Enum):
+    WAITING = "En espera"
     PENDING = "Pendiente"
     IN_PROGRESS = "En proceso"
     READY = "Listo"
@@ -162,14 +163,14 @@ class RepairOrderBase(BaseModel):
     entry_date: date = Field(default_factory=date.today)
     legacy_order_number: EmptyStrToNone = None
     is_warranty: bool
-    status: Optional[StatusOrder] = StatusOrder.PENDING
+    status: Optional[StatusOrder] = StatusOrder.WAITING
     agreed_price: EmptyFloatToNone = None
     exit_date: EmptyDateToNone = None
     description: EmptyStrToNone = None
 
     customer_id: int
     device_id: int
-    technician_id: int
+    technician_id: EmptyIntToNone = None
 
     @model_validator(mode='after')
     def check_dates(self) -> Self:
@@ -204,7 +205,6 @@ class RepairOrderUpdate(BaseModel):
 
     customer_id: EmptyIntToNone = None
     device_id: EmptyIntToNone = None
-    technician_id: EmptyIntToNone = None
 
 class RepairOrderUpdateStatus(BaseModel):
     status: StatusOrder
@@ -215,6 +215,9 @@ class RepairOrderUpdateDescription(BaseModel, ConfigCreate):
         max_length=255, 
         description="Descripción técnica de la reparación (máx. 255 caracteres)"
     )
+
+class RepairOrderUpdateTechnician(BaseModel):
+    technician_id: int
 
 # =========================================================================
 #---------------------------------SPARE PARTS------------------------------

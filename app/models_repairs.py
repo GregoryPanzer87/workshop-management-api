@@ -115,7 +115,7 @@ class RepairOrder(Base):
     # ForeignKeys
     customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"), nullable=False)
     device_id: Mapped[int] = mapped_column(ForeignKey("devices.id"), nullable=False)
-    technician_id: Mapped[int] = mapped_column(ForeignKey("technicians.id"), nullable=False)
+    technician_id: Mapped[Optional[int]] = mapped_column(ForeignKey("technicians.id"), nullable=True)
 
     # Relationships
     customer: Mapped["Customer"] = relationship("Customer", back_populates="repairs_orders")
