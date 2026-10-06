@@ -36,20 +36,22 @@ def generate_device_type_prefix(type_name: str, db: Session) -> str:
 
 
 def generate_custom_serial(db: Session, prefix: str = "INN") -> str:
-    """Generate a sequential internal serial number (e.g., SND-00042)"""
-    count = crud_device.count_by_prefix(db, prefix=prefix) + 1
-    return f"{prefix}-{count:05d}"
+    """Generate a sequential internal serial number (e.g., CORN-00007) based on the highest existing index."""
+    last_seq = crud_device.max_sequence_by_prefix(db, prefix=prefix)
+    next_seq = last_seq + 1
+    return f"{prefix}-{next_seq:05d}"
 
 
 def generate_custom_serial_batch(
     db: Session, count: int, prefix: str = "INN"
 ) -> List[str]:
-    """Generate sequential internal serial numbers"""
-    base_count = crud_device.count_by_prefix(db, prefix=prefix)
+    """Generate sequential internal serial numbers for batch insertion."""
+    last_seq = crud_device.max_sequence_by_prefix(db, prefix=prefix)
     generated_serial_numbers = []
+    
     for i in range(1, count + 1):
-        serial_number = f"{prefix}-{(base_count + i):05d}"
-        generated_serial_numbers.append(serial_number)
+        next_seq = last_seq + i
+        generated_serial_numbers.append(f"{prefix}-{next_seq:05d}")
 
     return generated_serial_numbers
 

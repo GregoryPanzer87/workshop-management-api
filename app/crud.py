@@ -235,11 +235,26 @@ class DeviceCRUD(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         db.flush()
         return db_device
 
-    def count_by_prefix(self, db: Session, prefix: str) -> int:
-        """Counts total devices that start with a specific serial prefix."""
+class DeviceCRUD(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
+    def update_owner(self, db: Session, device_id: int, new_client_id: int) -> Device:
+        db_device = self.get_by_id(db, id=device_id)
+        db_device.customer_id = new_client_id
+        db.flush()
+        return db_device
+
+    def max_sequence_by_prefix(self, db: Session, prefix: str) -> int:
+        """Obtiene el número correlativo más alto registrado para un prefijo (ej: para CORN-00006 retorna 6)."""
+        # Extrae los dígitos tras el guion '-' y los convierte a entero
+        seq_expr = func.cast(func.substr(Device.serial_number, len(prefix) + 2), Integer)
+
         stmt = (
-            select(func.count(Device.id))
-            .where(Device.serial_number.startswith(f"{prefix}-"))
+            select(seq_expr)
+            .where(
+                Device.serial_number.like(f"{prefix}-%"),
+                Device.serial_number.isnot(None)
+            )
+            .order_by(seq_expr.desc())
+            .limit(1)
         )
         return db.scalar(stmt) or 0
 
