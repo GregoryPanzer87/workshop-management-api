@@ -1,11 +1,12 @@
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
-
 from app import (
     User, UserCreate, UserResponse, UserUpdate, 
-    crud_user, crud_customer, crud_employee, get_db
+    UserLowResponse, EmployeeDirectory, Technician,
+    crud_user, crud_customer, crud_employee, crud_technician, get_db
 )
 from app.utils import (
     build_audit_change_details, 
@@ -18,6 +19,11 @@ from app.services import log_action
 from app.core import LEVEL_BASIC, LEVEL_ADVANCE
 
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
+
+USER_LOAD_OPTIONS = [
+    joinedload(User.employee),
+    joinedload(User.technician),
+]
 
 NOT_FOUND_USER = ["Usuario no encontrado."]
 INTEGRITY_ERROR = ["Ocurrió un conflicto al procesar la solicitud de usuario. Verifique los datos ingresados."]
@@ -69,9 +75,8 @@ def create_user(
     existence_checks = [
         (crud_customer, "client_id", "El cliente especificado no existe"),
         (crud_employee, "employee_id", "El empleado especificado no existe"),
+        (crud_technician, "technician_id", "El técnico especificado no existe"),
     ]
-    employee_id = create_data.get["employee_id"]
-    db_employee = crud_employee.get_by_id(db, employee_id)
 
     errors404 = validate_exists_by_create(db, create_data, existence_checks)
     if errors404:
@@ -125,6 +130,44 @@ def create_user(
 
     return crud_user.get_by_id(db, db_user.id)
 
+@router.get("/", response_model=List[UserLowResponse], dependencies=[Depends(require_roles(LEVEL_BASIC))])
+def read_employees(
+    q: Optional[str] = None, 
+    skip: int = 0, 
+    limit: int = 20, 
+    db: Session = Depends(get_db)
+):
+    """Retrieves a paginated list of employees or performs a real-time search by sending 'q'."""
+    q = q.strip() if q else None
+    if q:
+        return crud_user.search_ilike(
+            db=db, 
+            query=q, 
+            search_fields=[
+                User.username, 
+                User.mail, 
+                User.role,
+                User.password, 
+                Technician.name,
+                EmployeeDirectory.full_name,
+            ], 
+            joins=[EmployeeDirectory, Technician],
+            options=USER_LOAD_OPTIONS,
+            limit=limit,
+            skip= skip
+        )
+    return crud_employee.get_multi(db, skip=skip, limit=limit)
+
+@router.get("/{user_id}", response_model=UserResponse, dependencies=[Depends(require_roles(LEVEL_BASIC))])
+def read_audit_log_by_id(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user),):
+    """Retrieves an audit log specific by its ID."""
+    user_id_now = current_user.id
+    if user_id != user_id_now:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No puedes acceder a los datos de otro usuario"
+        )
+    return crud_user.get_by_id(db, id=user_id)
 
 @router.patch(
     "/{user_id}", 

@@ -76,11 +76,16 @@ class UserBase(BaseModel):
     
     employee_id: EmptyIntToNone = None
     customer_id: EmptyIntToNone = None
+    technician_id: EmptyIntToNone = None
 
 class UserCreate(UserBase, ConfigCreate):
     password: str
 
 class UserResponse(UserBase, ConfigResponse):
+    id: int
+    password: str
+
+class UserLowResponse(UserBase, ConfigResponse):
     id: int
 
 class UserUpdate(BaseModel):
@@ -91,6 +96,7 @@ class UserUpdate(BaseModel):
 
     employee_id: EmptyIntToNone = None
     customer_id: EmptyIntToNone = None
+    technician_id: EmptyIntToNone = None
     
 # =========================================================================
 #---------------------------------EXPENSE----------------------------------
@@ -171,6 +177,7 @@ class AuditLogUpdate(BaseModel):
 class ExchangeRateBase(BaseModel):
     currency: str
     exchange: float
+    rate_date: Optional[date] = None
 
 class ExchangeRateCreate(ExchangeRateBase, ConfigCreate):
     pass
@@ -180,6 +187,7 @@ class ExchangeRateBatchCreate(BaseModel, ConfigCreate):
 
 class ExchangeRateResponse(ExchangeRateBase, ConfigResponse):
     id: int
+    rate_date: date
 
 class ExchangeRateUpdate(BaseModel):
     pass
