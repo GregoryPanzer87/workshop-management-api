@@ -154,7 +154,9 @@ class StatusOrder(str, Enum):
     PENDING = "Pendiente"
     IN_PROGRESS = "En proceso"
     READY = "Listo"
+    NOT_REPAIR = "No reparado"
     DELIVERED = "Entregado"
+    DELIVERED_NOT_REPAIR = "Entregado no reparado"
 
 class RepairOrderBase(BaseModel):
     entry_date: date = Field(default_factory=date.today)
@@ -163,6 +165,7 @@ class RepairOrderBase(BaseModel):
     status: Optional[StatusOrder] = StatusOrder.PENDING
     agreed_price: EmptyFloatToNone = None
     exit_date: EmptyDateToNone = None
+    description: EmptyStrToNone = None
 
     customer_id: int
     device_id: int
@@ -205,6 +208,13 @@ class RepairOrderUpdate(BaseModel):
 
 class RepairOrderUpdateStatus(BaseModel):
     status: StatusOrder
+
+class RepairOrderUpdateDescription(BaseModel, ConfigCreate):
+    description: Optional[str] = Field(
+        default=None, 
+        max_length=255, 
+        description="Descripción técnica de la reparación (máx. 255 caracteres)"
+    )
 
 # =========================================================================
 #---------------------------------SPARE PARTS------------------------------

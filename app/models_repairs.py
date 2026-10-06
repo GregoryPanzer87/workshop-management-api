@@ -110,6 +110,7 @@ class RepairOrder(Base):
     exit_date: Mapped[Optional[date]] = mapped_column(Date,nullable=True)
     agreed_price: Mapped[Optional[float]] = mapped_column(nullable=True)
     legacy_order_number: Mapped[Optional[str]] = mapped_column(String(6), nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
     # ForeignKeys
     customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"), nullable=False)
