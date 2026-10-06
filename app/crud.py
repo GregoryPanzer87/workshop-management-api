@@ -21,7 +21,7 @@ from app import (
     # Technician
     Technician, TechnicianCreate, TechnicianUpdate,
     # Repair Order
-    RepairOrder, RepairOrderCreate, RepairOrderUpdate, RepairOrderUpdateStatus,
+    RepairOrder, RepairOrderCreate, RepairOrderUpdate, RepairOrderUpdateStatus, RepairOrderUpdateDescription,
     # Spare Part
     SparePart, SparePartCreate, SparePartUpdate,
     # Order Spare Part
@@ -152,34 +152,36 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         db: Session, 
         query: str, 
         search_fields: List[Any],
+        filters_eq: Optional[Dict[str, Any]] = None,
         joins: Optional[List[Any]] = None, 
         options: Optional[List[Any]] = None,
         limit: int = 20,
         skip: int = 0
     ) -> List[ModelType]:
-        """Search in tables by database with support for eager loading."""
-        if not query or not query.strip():
-            return self.get_multi(db, limit=limit, options=options)
-
-        clean_query = query.strip()
-        search_pattern = f"%{clean_query}%"
-
-        filters = [field.ilike(search_pattern) for field in search_fields if field is not None]
-        if not filters:
-            return self.get_multi(db, limit=limit, options=options)
-
+        """Search in tables by database with support for eager loading and exact field filters."""
         stmt = select(self.model)
 
         if joins:
             for join_model in joins:
                 stmt = stmt.join(join_model)
 
+        clean_query = query.strip() if query else None
+        if clean_query:
+            search_pattern = f"%{clean_query}%"
+            ilike_filters = [field.ilike(search_pattern) for field in search_fields if field is not None]
+            if ilike_filters:
+                stmt = stmt.where(or_(*ilike_filters))
+
+        if filters_eq:
+            for field_name, value in filters_eq.items():
+                if hasattr(self.model, field_name) and value is not None:
+                    stmt = stmt.where(getattr(self.model, field_name) == value)
+
         if options:
             for option in options:
                 stmt = stmt.options(option)
 
-        stmt = stmt.where(or_(*filters)).distinct().offset(skip).limit(limit)
-        
+        stmt = stmt.distinct().offset(skip).limit(limit)
         return list(db.scalars(stmt).all())
 
     #---------------------------------------------------------------------------------------
@@ -247,6 +249,17 @@ class RepairOrderCRUD(CRUDBase[RepairOrder, RepairOrderCreate, RepairOrderUpdate
         db_obj.status = obj_in.status.value
         db.flush()
         return db_obj
+
+    def description(
+        self, 
+        db: Session, 
+        db_obj: RepairOrder, 
+        obj_in: RepairOrderUpdateDescription
+    ) -> RepairOrder:
+        """Update repair order description."""
+        db_obj.description = obj_in.description.strip() if obj_in.description else None
+        db.flush()
+        return db_obj
     
     def delete(self, db: Session, db_obj: RepairOrder) -> RepairOrder:
         """Attempt to delete a order repair safely"""
@@ -298,6 +311,7 @@ class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
     def create(self, db: Session, *, obj_in: UserCreate) -> User:
         emp_id = obj_in.employee_id if obj_in.employee_id != 0 else None
         cust_id = obj_in.customer_id if obj_in.customer_id != 0 else None
+        tech_id = obj_in.technician_id if obj_in.technician_id != 0 else None
 
         db_user = User(
             username=obj_in.username,
@@ -307,7 +321,8 @@ class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
             role=obj_in.role,
 
             employee_id=emp_id,
-            customer_id=cust_id
+            customer_id=cust_id,
+            technician_id=tech_id,
         )
         db.add(db_user)
         db.flush()

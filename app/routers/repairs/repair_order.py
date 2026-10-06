@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import cast, String
@@ -10,7 +10,8 @@ from app import (
     RepairOrder, RepairOrderCreate, RepairOrderResponse, 
     RepairOrderDetailResponse, RepairOrderUpdate, 
     RepairOrderUpdateStatus, RepairOrderBatchCreate, 
-    User, Device, Customer, 
+    RepairOrderUpdateDescription, UserRole,
+    User, Device, Customer, Technician,
     crud_repair_order, crud_customer, crud_device, crud_technician
 )
 from app.utils import (
@@ -19,7 +20,7 @@ from app.utils import (
     generate_order_number, generate_order_numbers_batch
 )
 from app.services import log_action
-from app.api.deps import require_roles, get_current_user
+from app.api.deps import require_roles, get_current_user, get_current_technician
 from app.core import LEVEL_BASIC, LEVEL_MEDIUM, LEVEL_ADVANCE
 
 router = APIRouter(prefix="/repairs_orders", tags=["Repairs Orders"])
@@ -32,6 +33,17 @@ REPAIR_ORDER_LOAD_OPTIONS = [
 ]
 NOT_FOUND_REPAIR_ORDER = ["Orden de reparación no encontrada"]
 INTEGRITY_ERROR = ["Ocurrió un conflicto al crear la orden de reparación. Verifique los datos ingresados."]
+
+def get_current_technician_safe(current_user: User, db: Session):
+    """Resuelve de forma segura el técnico actual sin fallar si el usuario es administrador puro."""
+    try:
+        if getattr(current_user, "technician_id", None):
+            return crud_technician.get_by_id(db, current_user.technician_id)
+        if getattr(current_user, "employee_id", None):
+            return crud_technician.get_by_other(db, value=current_user.employee_id, field="employee_id")
+    except Exception:
+        pass
+    return None
 
 @router.post("/", response_model=RepairOrderResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_roles(LEVEL_MEDIUM))])
 def create_repair_order(repair_order_in: RepairOrderCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -202,31 +214,56 @@ def create_repair_orders_batch(
 @router.get("/", response_model=List[RepairOrderResponse], dependencies=[Depends(require_roles(LEVEL_BASIC))])
 def read_repairs_orders(
     q: Optional[str] = None,
+    status: Optional[str] = None,
+    only_mine: bool = False,
     customer_id: Optional[int] = None,
     device_id: Optional[int] = None,
     skip: int = 0, 
     limit: int = 20, 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    """Retrieves a paginated list of repairs orders or performs a real-time search by sending 'q'."""
-    if q and q.strip():
+    """Retrieves a paginated list of repairs orders with role and technician ownership rules."""
+    current_tech = get_current_technician_safe(current_user, db)
+
+    force_own_orders = False
+    if current_user.role == UserRole.TECHNICIAN:
+        force_own_orders = True
+    elif only_mine and current_tech:
+        force_own_orders = True
+
+    filters_eq = {}
+    if status:
+        filters_eq["status"] = status
+    if force_own_orders and current_tech:
+        filters_eq["technician_id"] = current_tech.id
+
+    filters_eq_arg = filters_eq if filters_eq else None
+    clean_q = q.strip() if q and q.strip() else None
+
+    if clean_q or filters_eq_arg:
         return crud_repair_order.search_ilike(
             db=db, 
-            query=q, 
-            search_fields=[RepairOrder.order_number,
-                           RepairOrder.legacy_order_number,
-                           cast(RepairOrder.entry_date, String),
-                           cast(RepairOrder.exit_date, String),
-                           RepairOrder.status,
-                           Device.serial_number,
-                           Customer.name,
-                           Customer.national_id,
-                           Customer.phone_number
+            query=clean_q if clean_q else "", 
+            search_fields=[
+                RepairOrder.order_number,
+                RepairOrder.legacy_order_number,
+                cast(RepairOrder.entry_date, String),
+                cast(RepairOrder.exit_date, String),
+                RepairOrder.status,
+                Device.serial_number,
+                Customer.name,
+                Customer.national_id,
+                Customer.phone_number,
+                Technician.name
             ],
-            joins=[Device, Customer],
+            filters_eq=filters_eq_arg,
+            joins=[Device, Customer, Technician],
             options=REPAIR_ORDER_LOAD_OPTIONS,      
-            limit=limit
+            limit=limit,
+            skip=skip
         )
+
     if customer_id is not None:
         return crud_repair_order.list_get_by_other(db=db, value=customer_id, field="customer_id", options=REPAIR_ORDER_LOAD_OPTIONS, skip=skip, limit=limit)
 
@@ -251,6 +288,22 @@ def read_repair_order_by_id(repair_order_id: int, db: Session = Depends(get_db))
             detail=NOT_FOUND_REPAIR_ORDER
         )
     return db_repair_order
+
+@router.get(
+    "/my_orders",
+    response_model=List[RepairOrderResponse],
+    dependencies=[Depends(require_roles(LEVEL_BASIC))]
+)
+def read_my_repair_orders(
+    db: Session = Depends(get_db),
+    current_tech: Technician = Depends(get_current_technician),
+):
+    """Retrieves the repair orders assigned to the authenticated technician."""
+    return crud_repair_order.list_get_by_other(
+        db=db, 
+        value=current_tech.id, 
+        field="technician_id"
+    )
 
 @router.patch("/{repair_order_id}", response_model=RepairOrderResponse, dependencies=[Depends(require_roles(LEVEL_MEDIUM))])
 def update_repair_order(repair_order_id: int, repair_order_in: RepairOrderUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -353,7 +406,7 @@ def update_repair_order(repair_order_id: int, repair_order_in: RepairOrderUpdate
     return db_repair_order
 
 
-@router.patch("/status/{repair_order_id}", response_model=RepairOrderResponse, dependencies=[Depends(require_roles(LEVEL_BASIC))])
+@router.patch("/status/{repair_order_id}", response_model=RepairOrderUpdateStatus, dependencies=[Depends(require_roles(LEVEL_BASIC))])
 def update_status_repair_order(repair_order_id: int, repair_order_in: RepairOrderUpdateStatus, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     db_repair_order = crud_repair_order.get_by_id(db, id=repair_order_id, options=REPAIR_ORDER_LOAD_OPTIONS)
     if not db_repair_order:
@@ -396,6 +449,66 @@ def update_status_repair_order(repair_order_id: int, repair_order_in: RepairOrde
         )
     
     return db_repair_order
+
+
+@router.patch(
+    "/description/{repair_order_id}",
+    response_model=RepairOrderResponse,
+    dependencies=[Depends(require_roles(LEVEL_MEDIUM))],
+)
+def update_repair_order_description(
+    repair_order_id: int,
+    description_in: RepairOrderUpdateDescription,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update only the description field of a repair order."""
+    db_repair_order = crud_repair_order.get_by_id(
+        db, id=repair_order_id, options=REPAIR_ORDER_LOAD_OPTIONS
+    )
+    if not db_repair_order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=NOT_FOUND_REPAIR_ORDER,
+        )
+
+    old_description = db_repair_order.description
+    new_description = description_in.description.strip() if description_in.description else None
+
+    if old_description == new_description:
+        return db_repair_order
+
+    try:
+        crud_repair_order.description(db, db_obj=db_repair_order, obj_in=description_in)
+
+        audit_detail = (
+            f"Descripción actualizada en la orden #{db_repair_order.order_number}: "
+            f"'{new_description if new_description else 'Sin descripción'}'"
+        )
+        log_action(
+            db,
+            user_id=current_user.id,
+            action="UPDATE",
+            entity="repair_orders",
+            entity_id=repair_order_id,
+            details=audit_detail[:255],
+        )
+
+        db.commit()
+        db.refresh(db_repair_order)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=["Ocurrió un conflicto al actualizar la descripción de la orden."],
+        )
+    except Exception as e:
+        db.rollback()
+        raise e
+
+    return crud_repair_order.get_by_id(
+        db, repair_order_id, options=REPAIR_ORDER_LOAD_OPTIONS
+    )
 
 
 @router.delete("/{repair_order_id}", status_code=status.HTTP_200_OK, dependencies=[Depends(require_roles(LEVEL_ADVANCE))])
