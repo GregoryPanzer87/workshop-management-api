@@ -83,35 +83,98 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     #---------------------------------------------------------------------------------------
 
-    def get_multi(
-    self, 
-    db: Session, 
-    identities: Optional[Sequence[Any]] = None, 
-    options: Optional[Sequence[Any]] = None, 
-    skip: int = 0, 
-    limit: int = 100
-) -> List[ModelType]:
-        """Retrieves a list of paginated records or filter by a list of IDs."""
-        stmt = select(self.model)
+    def _get_sort_expression(self, sort_by: Optional[str] = None, sort_order: str = "desc"):
+        """Generates the ordering expression dynamically."""
+        if not sort_by or not hasattr(self.model, sort_by):
+            return self.model.id.desc()
+        
+        column = getattr(self.model, sort_by)
+        return column.asc() if sort_order.lower() == "asc" else column.desc()
 
+    def get_multi(
+        self, 
+        db: Session, 
+        identities: Optional[Sequence[Any]] = None, 
+        options: Optional[Sequence[Any]] = None, 
+        skip: int = 0, 
+        limit: int = 100,
+        sort_by: Optional[str] = None,
+        sort_order: str = "desc"
+    ) -> List[ModelType]:
+        stmt = select(self.model)
         if identities:
             stmt = stmt.where(self.model.id.in_(identities))
-
         if options:
             stmt = stmt.options(*options)
 
-        stmt = stmt.offset(skip).limit(limit)
+        sort_criterion = self._get_sort_expression(sort_by, sort_order)
+        stmt = stmt.order_by(sort_criterion)
+
+        safe_limit = min(limit, 100)
+        stmt = stmt.offset(skip).limit(safe_limit)
         return list(db.scalars(stmt).all())
 
-    #---------------------------------------------------------------------------------------
-    
-    def list_get_by_other(self, db: Session, value: int, field: Any, options: Optional[Sequence[Any]] = None, skip: int = 0, limit: int = 20) -> List[ModelType]:
+    def list_get_by_other(
+        self, 
+        db: Session, 
+        value: Any, 
+        field: Any, 
+        options: Optional[Sequence[Any]] = None, 
+        skip: int = 0, 
+        limit: int = 20,
+        sort_by: Optional[str] = None,
+        sort_order: str = "desc"
+    ) -> List[ModelType]:
         column = getattr(self.model, field)
-        stmt = select(self.model).where(column == value).offset(skip).limit(limit)
-
+        stmt = select(self.model).where(column == value)
         if options:
             stmt = stmt.options(*options)
 
+        sort_criterion = self._get_sort_expression(sort_by, sort_order)
+        stmt = stmt.order_by(sort_criterion)
+
+        safe_limit = min(limit, 100)
+        stmt = stmt.offset(skip).limit(safe_limit)
+        return list(db.scalars(stmt).all())
+
+    def search_ilike(
+        self, 
+        db: Session, 
+        query: str, 
+        search_fields: List[Any],
+        filters_eq: Optional[Dict[str, Any]] = None,
+        joins: Optional[List[Any]] = None, 
+        options: Optional[List[Any]] = None,
+        limit: int = 20,
+        skip: int = 0,
+        sort_by: Optional[str] = None,
+        sort_order: str = "desc"
+    ) -> List[ModelType]:
+        stmt = select(self.model)
+        if joins:
+            for join_model in joins:
+                stmt = stmt.join(join_model)
+
+        clean_query = query.strip() if query else None
+        if clean_query:
+            search_pattern = f"%{clean_query}%"
+            ilike_filters = [field.ilike(search_pattern) for field in search_fields if field is not None]
+            if ilike_filters:
+                stmt = stmt.where(or_(*ilike_filters))
+
+        if filters_eq:
+            for field_name, value in filters_eq.items():
+                if hasattr(self.model, field_name) and value is not None:
+                    stmt = stmt.where(getattr(self.model, field_name) == value)
+
+        if options:
+            for option in options:
+                stmt = stmt.options(option)
+
+        sort_criterion = self._get_sort_expression(sort_by, sort_order)
+        safe_limit = min(limit, 100)
+        
+        stmt = stmt.distinct().order_by(sort_criterion).offset(skip).limit(safe_limit)
         return list(db.scalars(stmt).all())
 
     #---------------------------------------------------------------------------------------
@@ -145,45 +208,6 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         stmt = select(self.model).where(*conditions)
         return db.scalar(stmt)
-
-    #---------------------------------------------------------------------------------------
-
-    def search_ilike(
-        self, 
-        db: Session, 
-        query: str, 
-        search_fields: List[Any],
-        filters_eq: Optional[Dict[str, Any]] = None,
-        joins: Optional[List[Any]] = None, 
-        options: Optional[List[Any]] = None,
-        limit: int = 20,
-        skip: int = 0
-    ) -> List[ModelType]:
-        """Search in tables by database with support for eager loading and exact field filters."""
-        stmt = select(self.model)
-
-        if joins:
-            for join_model in joins:
-                stmt = stmt.join(join_model)
-
-        clean_query = query.strip() if query else None
-        if clean_query:
-            search_pattern = f"%{clean_query}%"
-            ilike_filters = [field.ilike(search_pattern) for field in search_fields if field is not None]
-            if ilike_filters:
-                stmt = stmt.where(or_(*ilike_filters))
-
-        if filters_eq:
-            for field_name, value in filters_eq.items():
-                if hasattr(self.model, field_name) and value is not None:
-                    stmt = stmt.where(getattr(self.model, field_name) == value)
-
-        if options:
-            for option in options:
-                stmt = stmt.options(option)
-
-        stmt = stmt.distinct().offset(skip).limit(limit)
-        return list(db.scalars(stmt).all())
 
     #---------------------------------------------------------------------------------------
     

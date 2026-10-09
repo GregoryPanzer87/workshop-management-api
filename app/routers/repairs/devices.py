@@ -173,6 +173,8 @@ def read_devices(
     customer_id: Optional[int] = None,
     skip: int = 0, 
     limit: int = 20, 
+    sort_by: Optional[str] = None,
+    sort_order: str = "desc",
     db: Session = Depends(get_db)
 ):
     """Retrieves a paginated list of devices or performs a real-time search by sending 'q'."""
@@ -192,7 +194,9 @@ def read_devices(
             joins=[Customer, DeviceType, DeviceBrand],
             options=DEVICE_LOAD_OPTIONS,
             limit=limit,
-            skip=skip
+            skip=skip,
+            sort_by=sort_by,
+            sort_order=sort_order
         )
     
     if customer_id is not None:
@@ -201,9 +205,25 @@ def read_devices(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=["El cliente especificado no existe"]
             )
-        return crud_device.list_get_by_other(db=db, value=customer_id, field="customer_id", options=DEVICE_LOAD_OPTIONS, skip=skip, limit=limit)
+        return crud_device.list_get_by_other(
+            db=db, 
+            value=customer_id, 
+            field="customer_id", 
+            options=DEVICE_LOAD_OPTIONS, 
+            skip=skip, 
+            limit=limit,
+            sort_by=sort_by,
+            sort_order=sort_order
+        )
 
-    return crud_device.get_multi(db, skip=skip, limit=limit, options=DEVICE_LOAD_OPTIONS)
+    return crud_device.get_multi(
+        db, 
+        skip=skip, 
+        limit=limit, 
+        options=DEVICE_LOAD_OPTIONS,
+        sort_by=sort_by,
+        sort_order=sort_order
+    )
 
 @router.get("/random_serial/{device_type_id}", response_model=str, dependencies=[Depends(require_roles(LEVEL_BASIC))])
 def generate_random_serial(device_type_id: int, db: Session = Depends(get_db)):

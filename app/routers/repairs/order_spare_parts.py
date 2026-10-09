@@ -209,6 +209,8 @@ def read_order_spare_parts(
     q: Optional[str] = None,
     skip: int = 0,
     limit: int = 20,
+    sort_by: Optional[str] = "id",
+    sort_order: str = "asc",
     db: Session = Depends(get_db),
 ):
     """Retrieves a paginated list of order spare parts or performs a real-time search by sending 'q'."""
@@ -225,9 +227,11 @@ def read_order_spare_parts(
             joins=[RepairOrder, SparePart],
             options=ORDER_SPARE_PARTS_LOAD_OPTIONS,
             limit=limit,
-            skip=skip
+            skip=skip,
+            sort_by=sort_by,
+            sort_order=sort_order
         )
-    return crud_order_spare_part.get_multi(db, options=ORDER_SPARE_PARTS_LOAD_OPTIONS, skip=skip, limit=limit)
+    return crud_order_spare_part.get_multi(db, options=ORDER_SPARE_PARTS_LOAD_OPTIONS, skip=skip, limit=limit, sort_by=sort_by, sort_order=sort_order)
 
 
 @router.get(
@@ -306,11 +310,9 @@ def update_order_spare_part(
 
     try:
         if is_new_spare_part:
-            # Old Data
             update_inventory_spare_part(
                 db=db, delta=old_quantity, user_id=current_user.id, spare_part_id=old_spare_part_id
             )
-            # New Data
             update_inventory_spare_part(
                 db=db, delta=-target_quantity, user_id=current_user.id, db_obj=target_spare_part
             )

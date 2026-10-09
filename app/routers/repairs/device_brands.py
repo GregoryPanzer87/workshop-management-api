@@ -29,7 +29,7 @@ def create_device_brand(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Create a device brand in the database."""
+    """Create a device brand in the database[cite: 19]."""
     if crud_device_brand.get_by_other(db, value=device_brand_in.name, field="name"):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -72,9 +72,11 @@ def read_devices_brands(
     q: Optional[str] = None,
     skip: int = 0,
     limit: int = 20,
+    sort_by: Optional[str] = "name",
+    sort_order: str = "asc",
     db: Session = Depends(get_db),
 ):
-    """Retrieves a paginated list of device brands or performs a real-time search by sending 'q'."""
+    """Retrieves a paginated list of device brands or performs a real-time search by sending 'q'[cite: 19]."""
     q = q.strip() if q else None
     if q:
         return crud_device_brand.search_ilike(
@@ -82,9 +84,11 @@ def read_devices_brands(
             query=q,
             search_fields=[DeviceBrand.name],
             limit=limit,
-            skip=skip
+            skip=skip,
+            sort_by=sort_by,
+            sort_order=sort_order
         )
-    return crud_device_brand.get_multi(db, skip=skip, limit=limit)
+    return crud_device_brand.get_multi(db, skip=skip, limit=limit, sort_by=sort_by, sort_order=sort_order)
 
 
 @router.get(
@@ -93,7 +97,7 @@ def read_devices_brands(
     dependencies=[Depends(require_roles(LEVEL_BASIC))],
 )
 def read_device_brand_by_id(device_brand_id: int, db: Session = Depends(get_db)):
-    """Retrieves a single device brand by ID."""
+    """Retrieves a single device brand by ID[cite: 19]."""
     db_device_brand = crud_device_brand.get_by_id(db, id=device_brand_id)
     if not db_device_brand:
         raise HTTPException(
@@ -114,7 +118,7 @@ def update_device_brand(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Update a device brand partially or completely."""
+    """Update a device brand partially or completely[cite: 19]."""
     db_device_brand = crud_device_brand.get_by_id(db, id=device_brand_id)
     if not db_device_brand:
         raise HTTPException(
@@ -179,7 +183,7 @@ def delete_device_brand(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    """Deletes a device brand by ID."""
+    """Deletes a device brand by ID[cite: 19]."""
     db_device_brand = crud_device_brand.get_by_id(db, device_brand_id)
     if not db_device_brand:
         raise HTTPException(

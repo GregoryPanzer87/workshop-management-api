@@ -31,7 +31,7 @@ NOT_FOUND_EMPLOYEE = ["El emplado especificado no existe."]
 
 @router.post("/", response_model=TechnicianResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_roles(LEVEL_MEDIUM))])
 def create_technician(technician_in: TechnicianCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Creates a new technician record (linked to an employee or external)."""
+    """Creates a new technician record (linked to an employee or external)[cite: 18]."""
     create_data = technician_in.model_dump(exclude_unset=True)
 
     if technician_in.employee_id is not None:
@@ -92,9 +92,11 @@ def read_technicians(
     q: Optional[str] = None, 
     skip: int = 0, 
     limit: int = 20, 
+    sort_by: Optional[str] = "name",
+    sort_order: str = "asc",
     db: Session = Depends(get_db)
 ):
-    """Retrieves a paginated list of technicians or performs a real-time search by sending 'q'."""
+    """Retrieves a paginated list of technicians or performs a real-time search by sending 'q'[cite: 18]."""
     q = q.strip() if q else None
     if q:
         return crud_technician.search_ilike(
@@ -109,13 +111,15 @@ def read_technicians(
             ],
             joins=[EmployeeDirectory],
             limit=limit,
-            skip=skip
+            skip=skip,
+            sort_by=sort_by,
+            sort_order=sort_order
         )
-    return crud_technician.get_multi(db, skip=skip, limit=limit)
+    return crud_technician.get_multi(db, skip=skip, limit=limit, sort_by=sort_by, sort_order=sort_order)
 
 @router.get("/employee/{employee_id}", response_model=TechnicianResponse, dependencies=[Depends(require_roles(LEVEL_BASIC))])
 def read_technician_by_employee(employee_id: int, db: Session = Depends(get_db)):
-    """Get technician record using the internal Employee ID."""
+    """Get technician record using the internal Employee ID[cite: 18]."""
     db_technician = crud_technician.get_by_other(
         db, value=employee_id, field="employee_id"
     )
@@ -128,7 +132,7 @@ def read_technician_by_employee(employee_id: int, db: Session = Depends(get_db))
 
 @router.get("/{technician_id}", response_model=TechnicianResponse, dependencies=[Depends(require_roles(LEVEL_BASIC))])
 def read_technician(technician_id: int, db: Session = Depends(get_db)):
-    """Get a specific technician by its primary key (Technician ID)."""
+    """Get a specific technician by its primary key (Technician ID)[cite: 18]."""
     db_technician = crud_technician.get_by_id(db, id=technician_id)
     if not db_technician:
         raise HTTPException(
@@ -144,7 +148,7 @@ def update_technician(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    """Updates a technician's commission or assigned employee ID."""
+    """Updates a technician's commission or assigned employee ID[cite: 18]."""
     db_technician = crud_technician.get_by_id(db, id=technician_id)
     if not db_technician:
         raise HTTPException(
@@ -229,7 +233,7 @@ def activate_technician(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    """Reactivates a deactivated technician record."""
+    """Reactivates a deactivated technician record[cite: 18]."""
     db_technician = crud_technician.get_by_id(db, id=technician_id)
     if not db_technician:
         raise HTTPException(
@@ -271,7 +275,7 @@ def activate_technician(
 
 @router.delete("/{technician_id}", status_code=status.HTTP_200_OK, dependencies=[Depends(require_roles(LEVEL_ADVANCE))])
 def delete_technician(technician_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Soft delete / Deactivate a technician."""
+    """Soft delete / Deactivate a technician[cite: 18]."""
     db_technician = crud_technician.get_by_id(db, technician_id)
     if not db_technician:
         raise HTTPException(

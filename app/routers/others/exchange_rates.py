@@ -77,6 +77,8 @@ def read_exchange_rates(
     q: Optional[str] = None, 
     skip: int = 0, 
     limit: int = 20, 
+    sort_by: Optional[str] = "rate_date",
+    sort_order: str = "desc",
     db: Session = Depends(get_db)
 ):
     """Retrieves a paginated list of exchange rates or performs a real-time search by sending 'q'."""
@@ -90,9 +92,11 @@ def read_exchange_rates(
                 ExchangeRate.currency
             ], 
             limit=limit,
-            skip=skip
+            skip=skip,
+            sort_by=sort_by,
+            sort_order=sort_order
         )
-    return crud_exchange_rate.get_multi(db, skip=skip, limit=limit)
+    return crud_exchange_rate.get_multi(db, skip=skip, limit=limit, sort_by=sort_by, sort_order=sort_order)
 
 @router.get("/{exchage_id}", response_model=ExchangeRateResponse, dependencies=[Depends(require_roles(LEVEL_BASIC))])
 def read_exchange_rate_by_id(exchage_id: int, db: Session = Depends(get_db)):

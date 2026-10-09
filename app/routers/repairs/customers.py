@@ -73,6 +73,8 @@ def read_customers(
     q: Optional[str] = None, 
     skip: int = 0, 
     limit: int = 20, 
+    sort_by: Optional[str] = "name",
+    sort_order: str = "asc",
     db: Session = Depends(get_db)
 ):
     """Retrieves a paginated list of customers or performs a real-time search by sending 'q'."""
@@ -83,9 +85,11 @@ def read_customers(
             query=q, 
             search_fields=[Customer.name, cast(Customer.national_id, String), Customer.phone_number, Customer.short_address], 
             limit=limit,
-            skip=skip
+            skip=skip,
+            sort_by=sort_by,
+            sort_order=sort_order
         )
-    return crud_customer.get_multi(db, skip=skip, limit=limit)
+    return crud_customer.get_multi(db, skip=skip, limit=limit, sort_by=sort_by, sort_order=sort_order)
 
 @router.get("/{customer_id}", response_model=CustomerResponse, dependencies=[Depends(require_roles(LEVEL_BASIC))])
 def read_customer_by_id(customer_id: int, db: Session = Depends(get_db)):

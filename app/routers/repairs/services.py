@@ -74,6 +74,8 @@ def read_services(
     q: Optional[str] = None,
     skip: int = 0,
     limit: int = 20,
+    sort_by: Optional[str] = "name",
+    sort_order: str = "asc",
     db: Session = Depends(get_db),
 ):
     """Retrieves a paginated list of services or performs a real-time search by sending 'q'."""
@@ -84,9 +86,11 @@ def read_services(
             query=q,
             search_fields=[Service.name],
             limit=limit,
-            skip=skip
+            skip=skip,
+            sort_by=sort_by,
+            sort_order=sort_order
         )
-    return crud_service.get_multi(db, skip=skip, limit=limit)
+    return crud_service.get_multi(db, skip=skip, limit=limit, sort_by=sort_by, sort_order=sort_order)
 
 
 @router.get(

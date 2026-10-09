@@ -35,7 +35,6 @@ NOT_FOUND_REPAIR_ORDER = ["Orden de reparación no encontrada"]
 INTEGRITY_ERROR = ["Ocurrió un conflicto al crear la orden de reparación. Verifique los datos ingresados."]
 
 def get_current_technician_safe(current_user: User, db: Session):
-    """Resuelve de forma segura el técnico actual sin fallar si el usuario es administrador puro."""
     try:
         if getattr(current_user, "technician_id", None):
             return crud_technician.get_by_id(db, current_user.technician_id)
@@ -47,7 +46,6 @@ def get_current_technician_safe(current_user: User, db: Session):
 
 @router.post("/", response_model=RepairOrderResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_roles(LEVEL_MEDIUM))])
 def create_repair_order(repair_order_in: RepairOrderCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Create a new repair order in the database."""
     create_data = repair_order_in.model_dump(exclude_unset=True)
 
     if current_user.role not in LEVEL_ADVANCE and 'legacy_order_number' in create_data and create_data['legacy_order_number']:
@@ -120,11 +118,10 @@ def create_repair_orders_batch(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    """Creates multiple repair orders in a single atomic transaction."""
     if not batch_in.orders:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=["La lista de órdenes de reparación no puede estar vacía."]
+            detail=["La lista de órdenes de reparación não puede estar vacía."]
         )
 
     orders_data = [order.model_dump(exclude_unset=True) for order in batch_in.orders]
@@ -220,10 +217,11 @@ def read_repairs_orders(
     device_id: Optional[int] = None,
     skip: int = 0, 
     limit: int = 20, 
+    sort_by: Optional[str] = "id",
+    sort_order: str = "desc",
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Retrieves a paginated list of repairs orders with role and technician ownership rules."""
     current_tech = get_current_technician_safe(current_user, db)
 
     force_own_orders = False
@@ -261,11 +259,13 @@ def read_repairs_orders(
             joins=[Device, Customer, Technician],
             options=REPAIR_ORDER_LOAD_OPTIONS,      
             limit=limit,
-            skip=skip
+            skip=skip,
+            sort_by=sort_by,
+            sort_order=sort_order
         )
 
     if customer_id is not None:
-        return crud_repair_order.list_get_by_other(db=db, value=customer_id, field="customer_id", options=REPAIR_ORDER_LOAD_OPTIONS, skip=skip, limit=limit)
+        return crud_repair_order.list_get_by_other(db=db, value=customer_id, field="customer_id", options=REPAIR_ORDER_LOAD_OPTIONS, skip=skip, limit=limit, sort_by=sort_by, sort_order=sort_order)
 
     if device_id is not None:
         if not crud_device.get_by_id(db, device_id):
@@ -273,14 +273,13 @@ def read_repairs_orders(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=["El equipo especificado no existe"]
             )
-        return crud_repair_order.list_get_by_other(db=db, value=device_id, field="device_id", options=REPAIR_ORDER_LOAD_OPTIONS, skip=skip, limit=limit)
+        return crud_repair_order.list_get_by_other(db=db, value=device_id, field="device_id", options=REPAIR_ORDER_LOAD_OPTIONS, skip=skip, limit=limit, sort_by=sort_by, sort_order=sort_order)
     
-    return crud_repair_order.get_multi(db, options=REPAIR_ORDER_LOAD_OPTIONS, skip=skip, limit=limit)
+    return crud_repair_order.get_multi(db, options=REPAIR_ORDER_LOAD_OPTIONS, skip=skip, limit=limit, sort_by=sort_by, sort_order=sort_order)
 
 
 @router.get("/{repair_order_id}", response_model=RepairOrderDetailResponse, dependencies=[Depends(require_roles(LEVEL_BASIC))])
 def read_repair_order_by_id(repair_order_id: int, db: Session = Depends(get_db)):
-    """Retrieves a single repair order by its ID."""
     db_repair_order = crud_repair_order.get_by_id(db, id=repair_order_id, options=REPAIR_ORDER_LOAD_OPTIONS)
     if not db_repair_order:
         raise HTTPException(
@@ -295,19 +294,25 @@ def read_repair_order_by_id(repair_order_id: int, db: Session = Depends(get_db))
     dependencies=[Depends(require_roles(LEVEL_BASIC))]
 )
 def read_my_repair_orders(
+    skip: int = 0,
+    limit: int = 20,
+    sort_by: Optional[str] = "id",
+    sort_order: str = "desc",
     db: Session = Depends(get_db),
     current_tech: Technician = Depends(get_current_technician),
 ):
-    """Retrieves the repair orders assigned to the authenticated technician."""
     return crud_repair_order.list_get_by_other(
         db=db, 
         value=current_tech.id, 
-        field="technician_id"
+        field="technician_id",
+        skip=skip,
+        limit=limit,
+        sort_by=sort_by,
+        sort_order=sort_order
     )
 
 @router.patch("/{repair_order_id}", response_model=RepairOrderResponse, dependencies=[Depends(require_roles(LEVEL_MEDIUM))])
 def update_repair_order(repair_order_id: int, repair_order_in: RepairOrderUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Update a repair order partially or completely."""
     db_repair_order = crud_repair_order.get_by_id(db, id=repair_order_id, options=REPAIR_ORDER_LOAD_OPTIONS)
     if not db_repair_order:
         raise HTTPException(
@@ -461,7 +466,6 @@ def update_repair_order_description(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Update only the description field of a repair order."""
     db_repair_order = crud_repair_order.get_by_id(
         db, id=repair_order_id, options=REPAIR_ORDER_LOAD_OPTIONS
     )
@@ -520,7 +524,6 @@ def update_repair_order_technician(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Assigns or updates a technician to the order directly."""
     db_repair_order = crud_repair_order.get_by_id(
         db, id=repair_order_id, options=REPAIR_ORDER_LOAD_OPTIONS
     )

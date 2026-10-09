@@ -13,6 +13,8 @@ def read_audit_log(
     q: Optional[str] = None, 
     skip: int = 0, 
     limit: int = 20, 
+    sort_by: Optional[str] = "created_at",
+    sort_order: str = "desc",
     db: Session = Depends(get_db)
 ):
     """Retrieves a paginated list of log or performs a real-time search by sending 'q'."""
@@ -28,9 +30,11 @@ def read_audit_log(
                 AuditLog.details
             ], 
             limit=limit,
-            skip=skip
+            skip=skip,
+            sort_by=sort_by,
+            sort_order=sort_order
         )
-    return crud_audit.get_multi(db, skip=skip, limit=limit)
+    return crud_audit.get_multi(db, skip=skip, limit=limit, sort_by=sort_by, sort_order=sort_order)
 
 @router.get("/{log_id}", response_model=AuditLogResponse, dependencies=[Depends(require_roles(LEVEL_ADVANCE))])
 def read_audit_log_by_id(log_id: int, db: Session = Depends(get_db)):

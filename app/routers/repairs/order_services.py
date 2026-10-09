@@ -196,6 +196,8 @@ def read_order_services(
     q: Optional[str] = None,
     skip: int = 0,
     limit: int = 20,
+    sort_by: Optional[str] = "id",
+    sort_order: str = "asc",
     db: Session = Depends(get_db),
 ):
     """Retrieves a paginated list of order services or performs a real-time search by sending 'q'."""
@@ -212,9 +214,11 @@ def read_order_services(
             joins=[RepairOrder, Service],
             options=ORDER_SERVICES_LOAD_OPTIONS,
             limit=limit,
-            skip=skip
+            skip=skip,
+            sort_by=sort_by,
+            sort_order=sort_order
         )
-    return crud_order_service.get_multi(db, options=ORDER_SERVICES_LOAD_OPTIONS, skip=skip, limit=limit)
+    return crud_order_service.get_multi(db, options=ORDER_SERVICES_LOAD_OPTIONS, skip=skip, limit=limit, sort_by=sort_by, sort_order=sort_order)
 
 
 @router.get(

@@ -105,7 +105,7 @@ class DeviceBaseResponse(ConfigResponse, DeviceBase):
     id: int
 
 class DeviceResponse(DeviceBaseResponse):
-    customer: CustomerMinResponse
+    customer: CustomerResponse
     device_type: DeviceTypeResponse
     device_brand: DeviceBrandResponse
 
@@ -158,6 +158,7 @@ class StatusOrder(str, Enum):
     NOT_REPAIR = "No reparado"
     DELIVERED = "Entregado"
     DELIVERED_NOT_REPAIR = "Entregado no reparado"
+    DELIVERED_NOT_PAY= "Entregado no pago"
 
 class RepairOrderBase(BaseModel):
     entry_date: date = Field(default_factory=date.today)
@@ -167,6 +168,7 @@ class RepairOrderBase(BaseModel):
     agreed_price: EmptyFloatToNone = None
     exit_date: EmptyDateToNone = None
     description: EmptyStrToNone = None
+    detail: EmptyStrToNone = None
 
     customer_id: int
     device_id: int
@@ -202,6 +204,7 @@ class RepairOrderUpdate(BaseModel):
     is_warranty: EmptyBoolToNone = None
     agreed_price: EmptyFloatToNone = None
     exit_date: EmptyDateToNone = None
+    detail: EmptyStrToNone = None
 
     customer_id: EmptyIntToNone = None
     device_id: EmptyIntToNone = None

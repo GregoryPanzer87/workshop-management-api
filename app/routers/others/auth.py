@@ -136,6 +136,8 @@ def read_employees(
     q: Optional[str] = None, 
     skip: int = 0, 
     limit: int = 20, 
+    sort_by: Optional[str] = "username",
+    sort_order: str = "asc",
     db: Session = Depends(get_db)
 ):
     """Retrieves a paginated list of employees or performs a real-time search by sending 'q'."""
@@ -155,9 +157,11 @@ def read_employees(
             joins=[EmployeeDirectory, Technician],
             options=USER_LOAD_OPTIONS,
             limit=limit,
-            skip= skip
+            skip=skip,
+            sort_by=sort_by,
+            sort_order=sort_order
         )
-    return crud_user.get_multi(db, skip=skip, limit=limit, options=USER_LOAD_OPTIONS)
+    return crud_user.get_multi(db, skip=skip, limit=limit, sort_by=sort_by, sort_order=sort_order, options=USER_LOAD_OPTIONS)
 
 @router.get("/{user_id}", response_model=UserResponse, dependencies=[Depends(require_roles(LEVEL_BASIC))])
 def read_audit_log_by_id(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user),):

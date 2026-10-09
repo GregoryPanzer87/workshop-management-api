@@ -30,7 +30,7 @@ def create_employee(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Creates a new employee in the database and generates initial credentials suggestion."""
+    """Creates a new employee in the database and generates initial credentials suggestion[cite: 20]."""
     create_data = employee_in.model_dump(exclude_unset=True)
 
     unique_fields = [
@@ -99,9 +99,11 @@ def read_employees(
     q: Optional[str] = None, 
     skip: int = 0, 
     limit: int = 20, 
+    sort_by: Optional[str] = "full_name",
+    sort_order: str = "asc",
     db: Session = Depends(get_db)
 ):
-    """Retrieves a paginated list of employees or performs a real-time search by sending 'q'."""
+    """Retrieves a paginated list of employees or performs a real-time search by sending 'q'[cite: 20]."""
     if q and q.strip():
         return crud_employee.search_ilike(
             db=db, 
@@ -112,13 +114,15 @@ def read_employees(
                 EmployeeDirectory.short_address
             ], 
             limit=limit,
-            skip=skip
+            skip=skip,
+            sort_by=sort_by,
+            sort_order=sort_order
         )
-    return crud_employee.get_multi(db, skip=skip, limit=limit)
+    return crud_employee.get_multi(db, skip=skip, limit=limit, sort_by=sort_by, sort_order=sort_order)
 
 @router.get("/code/{employee_code}", response_model=EmployeeDirectoryResponse, dependencies=[Depends(require_roles(LEVEL_BASIC))])
 def read_employee_by_code(employee_code: str, db: Session = Depends(get_db)):
-    """Retrieves a employee by its employee code."""
+    """Retrieves a employee by its employee code[cite: 20]."""
     db_employee = crud_employee.get_by_other(db, value=employee_code, field="employee_code")
     if not db_employee:
         raise HTTPException(
@@ -129,7 +133,7 @@ def read_employee_by_code(employee_code: str, db: Session = Depends(get_db)):
 
 @router.get("/{employee_id}", response_model=EmployeeDirectoryResponse, dependencies=[Depends(require_roles(LEVEL_BASIC))])
 def read_employee_by_id(employee_id: int, db: Session = Depends(get_db)):
-    """Retrieves an employee by its ID."""
+    """Retrieves an employee by its ID[cite: 20]."""
     db_employee = crud_employee.get_by_id(db, id=employee_id)
     if not db_employee:
         raise HTTPException(
@@ -145,7 +149,7 @@ def update_employee(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Updates an employee partially or completely."""
+    """Updates an employee partially or completely[cite: 20]."""
     db_employee = crud_employee.get_by_id(db, id=employee_id)
     if not db_employee:
         raise HTTPException(
@@ -227,7 +231,7 @@ def activate_employee(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    """Reactivates a deactivated employee record."""
+    """Reactivates a deactivated employee record[cite: 20]."""
     db_employee = crud_employee.get_by_id(db, id=employee_id)
     if not db_employee:
         raise HTTPException(
@@ -263,7 +267,7 @@ def activate_employee(
 
 @router.delete("/{employee_id}", dependencies=[Depends(require_roles(LEVEL_ADVANCE))])
 def delete_employee(employee_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Soft delete / Deactivate an employee."""
+    """Soft delete / Deactivate an employee[cite: 20]."""
     db_employee = crud_employee.get_by_id(db, employee_id)
     if not db_employee:
         raise HTTPException(

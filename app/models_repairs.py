@@ -17,10 +17,10 @@ class Customer(Base):
 
     # Table Columns
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    national_id: Mapped[Optional[str]] = mapped_column(String(20), unique=True, nullable=True)
-    name: Mapped[str] = mapped_column(String(50), nullable=False)
-    phone_number: Mapped[Optional[str]] = mapped_column(String(20), unique=True, nullable=True)
-    email: Mapped[Optional[str]] = mapped_column(String(100), unique=True, nullable=True)
+    national_id: Mapped[Optional[str]] = mapped_column(String(20), unique=True, index=True, nullable=True)
+    name: Mapped[str] = mapped_column(String(50), index=True, nullable=False)
+    phone_number: Mapped[Optional[str]] = mapped_column(String(20), unique=True, index=True, nullable=True)
+    email: Mapped[Optional[str]] = mapped_column(String(100), unique=True, index=True, nullable=True)
     short_address: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
 
     # Relationships
@@ -58,14 +58,13 @@ class Device(Base):
 
     # Table Columns
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    model: Mapped[str] = mapped_column(String(30), nullable=False)
-    serial_number: Mapped[Optional[str]] = mapped_column(String(50), unique=True, nullable=True)
-    description: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    model: Mapped[str] = mapped_column(String(30), index=True, nullable=False)
+    serial_number: Mapped[Optional[str]] = mapped_column(String(50), unique=True, index=True, nullable=True)
 
     # ForeignKeys
-    customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"), nullable=False)
-    device_type_id: Mapped[int] = mapped_column(ForeignKey("device_types.id"), nullable=False)
-    device_brand_id: Mapped[int] = mapped_column(ForeignKey("device_brands.id"), nullable=False)
+    customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"), index=True, nullable=False)
+    device_type_id: Mapped[int] = mapped_column(ForeignKey("device_types.id"), index=True, nullable=False)
+    device_brand_id: Mapped[int] = mapped_column(ForeignKey("device_brands.id"), index=True, nullable=False)
 
     # Relationships
     customer: Mapped["Customer"] = relationship("Customer", back_populates="devices")
@@ -111,6 +110,7 @@ class RepairOrder(Base):
     agreed_price: Mapped[Optional[float]] = mapped_column(nullable=True)
     legacy_order_number: Mapped[Optional[str]] = mapped_column(String(6), nullable=True)
     description: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    detail: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
     # ForeignKeys
     customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"), nullable=False)
@@ -133,7 +133,7 @@ class SparePart(Base):
 
     # Table Columns
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     component_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     brand: Mapped[Optional[str]] = mapped_column(String(100), nullable=True) 
     supplier: Mapped[Optional[str]] = mapped_column(String(100), nullable=True) 
@@ -171,7 +171,7 @@ class Service(Base):
 
     # Table Columns
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     price: Mapped[Optional[float]] = mapped_column(nullable=True)
 
     # Relationships

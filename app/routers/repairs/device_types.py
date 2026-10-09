@@ -33,7 +33,7 @@ def create_device_type(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Create a device type in the database."""
+    """Create a device type in the database[cite: 17]."""
     create_data = device_type_in.model_dump(exclude_unset=True)
 
     unique_fields = [
@@ -93,9 +93,11 @@ def read_devices_types(
     q: Optional[str] = None,
     skip: int = 0,
     limit: int = 20,
+    sort_by: Optional[str] = "name",
+    sort_order: str = "asc",
     db: Session = Depends(get_db),
 ):
-    """Retrieves a paginated list of device types or performs a real-time search by sending 'q'."""
+    """Retrieves a paginated list of device types or performs a real-time search by sending 'q'[cite: 17]."""
     q = q.strip() if q else None
     if q:
         return crud_device_type.search_ilike(
@@ -103,9 +105,11 @@ def read_devices_types(
             query=q,
             search_fields=[DeviceType.name, DeviceType.prefix],
             limit=limit,
-            skip=skip
+            skip=skip,
+            sort_by=sort_by,
+            sort_order=sort_order
         )
-    return crud_device_type.get_multi(db, skip=skip, limit=limit)
+    return crud_device_type.get_multi(db, skip=skip, limit=limit, sort_by=sort_by, sort_order=sort_order)
 
 
 @router.get(
@@ -114,7 +118,7 @@ def read_devices_types(
     dependencies=[Depends(require_roles(LEVEL_BASIC))],
 )
 def read_device_type_by_id(device_type_id: int, db: Session = Depends(get_db)):
-    """Retrieves a single device type by ID."""
+    """Retrieves a single device type by ID[cite: 17]."""
     db_device_type = crud_device_type.get_by_id(db, id=device_type_id)
     if not db_device_type:
         raise HTTPException(
@@ -135,7 +139,7 @@ def update_device_type(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Update a device type partially or completely."""
+    """Update a device type partially or completely[cite: 17]."""
     db_device_type = crud_device_type.get_by_id(db, id=device_type_id)
     if not db_device_type:
         raise HTTPException(
@@ -210,8 +214,8 @@ def delete_device_type(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    """Deletes a device type by ID."""
-    db_device_type = crud_device_type.get_by_id(db, device_type_id)
+    """Deletes a device type by ID[cite: 17]."""
+    db_device_type = crud_device_type.get_by_id(device_type_id)
     if not db_device_type:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

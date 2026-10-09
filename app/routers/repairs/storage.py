@@ -84,6 +84,8 @@ def read_storage_entries(
     q: Optional[str] = None, 
     skip: int = 0, 
     limit: int = 20, 
+    sort_by: Optional[str] = "id",
+    sort_order: str = "asc",
     db: Session = Depends(get_db)
 ):
     """Retrieves a paginated list of storage entries or performs a real-time search by sending 'q'."""
@@ -96,9 +98,11 @@ def read_storage_entries(
             joins=[Device],
             options=STORAGE_LOAD_OPTIONS,
             limit=limit,
-            skip=skip
+            skip=skip,
+            sort_by=sort_by,
+            sort_order=sort_order
         )
-    return crud_storage.get_multi(db, options=STORAGE_LOAD_OPTIONS, skip=skip, limit=limit)
+    return crud_storage.get_multi(db, options=STORAGE_LOAD_OPTIONS, skip=skip, limit=limit, sort_by=sort_by, sort_order=sort_order)
 
 
 @router.get("/device/{device_id}", response_model=StorageResponse, dependencies=[Depends(require_roles(LEVEL_BASIC))])
