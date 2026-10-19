@@ -83,17 +83,40 @@ class DeviceBrandUpdate(BaseModel):
     name: EmptyStrToNone = None
 
 # =========================================================================
+#------------------------------DEVICES MODEL-------------------------------
+# =========================================================================
+
+class DeviceModelBase(BaseModel):
+    name: str
+    device_type_id: int
+    device_brand_id: int
+
+class DeviceModelCreate(ConfigCreate, DeviceModelBase):
+    pass
+
+class DeviceModelResponse(ConfigResponse, DeviceModelBase):
+    id: int
+    device_type: DeviceTypeResponse
+    device_brand: DeviceBrandResponse
+
+class DeviceModelMinResponse(ConfigResponse, BaseModel):
+    id: int
+    name: str
+
+class DeviceModelUpdate(BaseModel):
+    name: EmptyStrToNone = None
+    device_type_id: EmptyIntToNone = None
+    device_brand_id: EmptyIntToNone = None
+
+# =========================================================================
 #---------------------------------DEVICES---------------------------------
 # =========================================================================
 
 class DeviceBase(BaseModel):
     customer_id: int
-    model: str
+    device_model_id: int
     serial_number: EmptyStrToNone = None
     description: EmptyStrToNone = None
-
-    device_type_id: int
-    device_brand_id: int
 
 class DeviceCreate(ConfigCreate, DeviceBase):
     pass
@@ -106,19 +129,15 @@ class DeviceBaseResponse(ConfigResponse, DeviceBase):
 
 class DeviceResponse(DeviceBaseResponse):
     customer: CustomerResponse
-    device_type: DeviceTypeResponse
-    device_brand: DeviceBrandResponse
+    device_model: DeviceModelResponse
 
 class DeviceMinResponse(DeviceBaseResponse):
-    device_type: DeviceTypeResponse
-    device_brand: DeviceBrandResponse
+    device_model: DeviceModelResponse
 
 class DeviceUpdate(BaseModel):
-    model: EmptyStrToNone = None
+    device_model_id: EmptyIntToNone = None
     serial_number: EmptyStrToNone = None
     description: EmptyStrToNone = None
-    device_type_id: EmptyIntToNone = None
-    device_brand_id: EmptyIntToNone = None
 
 # =========================================================================
 #---------------------------------TECHNICIAN-------------------------------

@@ -1,18 +1,15 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import cast, String
 from sqlalchemy.exc import IntegrityError
 from collections import defaultdict
 
-
 from app import (
-    DeviceType, DeviceBrand,
+    DeviceModel, DeviceType, DeviceBrand,
     Device, DeviceCreate, DeviceBatchCreate,
     DeviceResponse, DeviceUpdate, 
     Customer, User,
-    crud_device_type, crud_device_brand,
-    crud_device, crud_customer, get_db
+    crud_device_model, crud_device, crud_customer, get_db
 )
 from app.api.deps import get_current_user, require_roles
 from app.utils import (
@@ -23,10 +20,11 @@ from app.utils import (
 from app.services import log_action
 from app.core import LEVEL_BASIC, LEVEL_MEDIUM
 
+# Carga de relaciones anidadas: Device -> DeviceModel -> DeviceType & DeviceBrand
 DEVICE_LOAD_OPTIONS = [
     joinedload(Device.customer),
-    joinedload(Device.device_type),
-    joinedload(Device.device_brand),
+    joinedload(Device.device_model).joinedload(DeviceModel.device_type),
+    joinedload(Device.device_model).joinedload(DeviceModel.device_brand),
 ]
 
 router = APIRouter(prefix="/devices", tags=["Devices"])
@@ -44,8 +42,7 @@ def create_device(
 
     existence_checks = [
         (crud_customer, "customer_id", "El cliente especificado no existe"),
-        (crud_device_type, "device_type_id", "El tipo de equipo especificado no existe"),
-        (crud_device_brand, "device_brand_id", "La marca de equipo especificada no existe"),
+        (crud_device_model, "device_model_id", "El modelo de equipo especificado no existe"),
     ]
 
     errors_404 = validate_exists_by_create(db, create_data, existence_checks)
@@ -63,8 +60,13 @@ def create_device(
                 detail=["Ya existe un equipo registrado con este Serial"]
             )
     else:
-        dev_type = crud_device_type.get_by_id(db, id=create_data["device_type_id"])
-        prefix = dev_type.prefix if (dev_type and getattr(dev_type, "prefix", None)) else "INN"
+        # Obtener el modelo para acceder a su DeviceType y conocer su prefijo
+        dev_model = crud_device_model.get_by_id(
+            db, 
+            id=create_data["device_model_id"], 
+            options=[joinedload(DeviceModel.device_type)]
+        )
+        prefix = dev_model.device_type.prefix if (dev_model and dev_model.device_type and dev_model.device_type.prefix) else "INN"
         create_data["serial_number"] = generate_custom_serial(db=db, prefix=prefix)
 
     try:
@@ -93,25 +95,25 @@ def create_device(
 
     return crud_device.get_by_id(db, id=db_device.id, options=DEVICE_LOAD_OPTIONS)
 
+
 @router.post("/batch", response_model=List[DeviceResponse], status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_roles(LEVEL_MEDIUM))])
 def create_devices_batch(
     batch_in: DeviceBatchCreate, 
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    """Create multiple device in a single atomic transaction."""
+    """Create multiple devices in a single atomic transaction."""
     if not batch_in.devices:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=["La lista de órdenes de reparación no puede estar vacía."]
+            detail=["La lista de equipos no puede estar vacía."]
         )
 
     devices_data = [device_in.model_dump(exclude_unset=True) for device_in in batch_in.devices]
 
     existence_checks = [
         (crud_customer, "customer_id", "El cliente especificado no existe"),
-        (crud_device_type, "device_type_id", "El tipo de equipo especificado no existe"),
-        (crud_device_brand, "device_brand_id", "La marca de equipo especificada no existe"),
+        (crud_device_model, "device_model_id", "El modelo de equipo especificado no existe"),
     ]
 
     for index, data in enumerate(devices_data):
@@ -126,9 +128,13 @@ def create_devices_batch(
     for idx, item in enumerate(devices_data):
         sn = item.get("serial_number")
         if not sn or not str(sn).strip():
-            device_type_id_dt = item.get("device_type_id")
-            dev_type = crud_device_type.get_by_id(db, id=device_type_id_dt)
-            prefix_dt = dev_type.prefix if (dev_type and dev_type.prefix) else "INN"
+            device_model_id = item.get("device_model_id")
+            dev_model = crud_device_model.get_by_id(
+                db, 
+                id=device_model_id, 
+                options=[joinedload(DeviceModel.device_type)]
+            )
+            prefix_dt = dev_model.device_type.prefix if (dev_model and dev_model.device_type and dev_model.device_type.prefix) else "INN"
             grouped_by_prefix[prefix_dt].append(idx)
 
     for target_prefix, indices in grouped_by_prefix.items():
@@ -167,6 +173,7 @@ def create_devices_batch(
     db_devices = crud_device.get_multi(db=db, identities=created_ids, options=DEVICE_LOAD_OPTIONS)
     return db_devices
 
+
 @router.get("/", response_model=List[DeviceResponse], dependencies=[Depends(require_roles(LEVEL_BASIC))])
 def read_devices(
     q: Optional[str] = None,
@@ -184,14 +191,14 @@ def read_devices(
             db=db, 
             query=q, 
             search_fields=[
+                DeviceModel.name,
                 DeviceType.name, 
                 DeviceBrand.name, 
                 Customer.name,
                 Customer.national_id,
-                Device.model, 
                 Device.serial_number
             ], 
-            joins=[Customer, DeviceType, DeviceBrand],
+            joins=[Customer, DeviceModel, DeviceType, DeviceBrand],
             options=DEVICE_LOAD_OPTIONS,
             limit=limit,
             skip=skip,
@@ -225,16 +232,23 @@ def read_devices(
         sort_order=sort_order
     )
 
-@router.get("/random_serial/{device_type_id}", response_model=str, dependencies=[Depends(require_roles(LEVEL_BASIC))])
-def generate_random_serial(device_type_id: int, db: Session = Depends(get_db)):
-    dev_type = crud_device_type.get_by_id(db, id=device_type_id)
-    if not dev_type:
+
+@router.get("/random_serial/{device_model_id}", response_model=str, dependencies=[Depends(require_roles(LEVEL_BASIC))])
+def generate_random_serial(device_model_id: int, db: Session = Depends(get_db)):
+    """Genera un serial aleatorio correlativo según el prefijo del tipo de equipo vinculado al modelo."""
+    dev_model = crud_device_model.get_by_id(
+        db, 
+        id=device_model_id, 
+        options=[joinedload(DeviceModel.device_type)]
+    )
+    if not dev_model:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=["El tipo de equipo especificado no existe"]
+            detail=["El modelo de equipo especificado no existe"]
         )
-    prefix = dev_type.prefix if dev_type.prefix else "INN"
+    prefix = dev_model.device_type.prefix if (dev_model.device_type and dev_model.device_type.prefix) else "INN"
     return generate_custom_serial(db, prefix=prefix)
+
 
 @router.get("/{device_id}", response_model=DeviceResponse, dependencies=[Depends(require_roles(LEVEL_BASIC))])
 def read_device_by_id(device_id: int, db: Session = Depends(get_db)):
@@ -246,6 +260,7 @@ def read_device_by_id(device_id: int, db: Session = Depends(get_db)):
             detail=NOT_FOUND_DEVICE
         )
     return db_device
+
 
 @router.patch("/{device_id}", response_model=DeviceResponse, dependencies=[Depends(require_roles(LEVEL_MEDIUM))])
 def update_device(
@@ -267,8 +282,7 @@ def update_device(
         return crud_device.get_by_id(db, device_id, options=DEVICE_LOAD_OPTIONS)
 
     existence_checks = [
-        (crud_device_type, "device_type_id", "El tipo de equipo especificado no existe"),
-        (crud_device_brand, "device_brand_id", "La marca de equipo especificada no existe"),
+        (crud_device_model, "device_model_id", "El modelo de equipo especificado no existe"),
     ]
 
     errors = validate_exists_by_update(db, update_data, existence_checks)
@@ -297,14 +311,14 @@ def update_device(
         crud_device.update(db, db_obj=db_device, obj_in=update_data)
 
         if audit_details:
-                log_action(
-                    db,
-                    user_id=current_user.id,
-                    action="UPDATE",
-                    entity="devices",
-                    entity_id=device_id,
-                    details=audit_details
-                )
+            log_action(
+                db,
+                user_id=current_user.id,
+                action="UPDATE",
+                entity="devices",
+                entity_id=device_id,
+                details=audit_details
+            )
 
         db.commit()
         db.refresh(db_device)
@@ -319,6 +333,7 @@ def update_device(
         raise e
         
     return crud_device.get_by_id(db, device_id, options=DEVICE_LOAD_OPTIONS)
+
 
 @router.delete("/{device_id}", status_code=status.HTTP_200_OK, dependencies=[Depends(require_roles(LEVEL_MEDIUM))])
 def delete_device(device_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -347,13 +362,18 @@ def delete_device(device_id: int, db: Session = Depends(get_db), current_user: U
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=["No se puede eliminar el equipo porque tiene ordenes asociadas."]
+            detail=["No se puede eliminar el equipo porque tiene órdenes asociadas."]
         )
     except Exception as e:
         db.rollback()
         raise e
     
-    return {"message": f"Equipo '{db_device.device_type.name}-{db_device.model}-{db_device.serial_number}' eliminado correctamente"}
+    # Formateo del mensaje usando la nueva jerarquía dev_model -> device_type
+    dev_type_name = db_device.device_model.device_type.name if (db_device.device_model and db_device.device_model.device_type) else "Desconocido"
+    model_name = db_device.device_model.name if db_device.device_model else "Desconocido"
+    
+    return {"message": f"Equipo '{dev_type_name}-{model_name}-{db_device.serial_number}' eliminado correctamente"}
+
 
 @router.patch("/{device_id}/transfer/{new_customer_id}", response_model=DeviceResponse, dependencies=[Depends(require_roles(LEVEL_MEDIUM))])
 def change_owner(
@@ -386,7 +406,6 @@ def change_owner(
     old_customer_str = f"{db_device.customer.name} (ID: {db_device.customer.id})" if db_device.customer else "Desconocido"
     new_customer_str = f"{new_customer.name} (ID: {new_customer.id})"
 
-
     try:
         db_device = crud_device.update_owner(db, device_id=device_id, new_customer_id=new_customer_id)
 
@@ -396,7 +415,7 @@ def change_owner(
             action="UPDATE",
             entity="devices",
             entity_id=device_id,
-            details=f"Transferencia de dueño del equipo (iD: {device_id}): De {old_customer_str} a {new_customer_str}",
+            details=f"Transferencia de dueño del equipo (ID: {device_id}): De {old_customer_str} a {new_customer_str}",
         )
 
         db.commit()

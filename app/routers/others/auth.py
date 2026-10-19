@@ -35,7 +35,8 @@ def login(
     user_in: OAuth2PasswordRequestForm = Depends()
 ):
     """Authenticates a user and returns a JWT token."""
-    user = crud_user.get_by_other(db, value=user_in.username, field="username")
+    # SOLUCIÓN: Convertir el username a string antes de consultar la DB
+    user = crud_user.get_by_other(db, value=str(user_in.username), field="username")
     
     if not user or not verify_password(user_in.password, user.password):
         raise HTTPException(

@@ -41,7 +41,8 @@ class DeviceType(Base):
     prefix: Mapped[Optional[str]] = mapped_column(String(5), unique=True, nullable=True)
     
     # Relationships
-    devices: Mapped[List["Device"]] = relationship("Device", back_populates="device_type")
+    models: Mapped[List["DeviceModel"]] = relationship("DeviceModel", back_populates="device_type")
+
 
 class DeviceBrand(Base):
     __tablename__ = "device_brands"
@@ -51,28 +52,44 @@ class DeviceBrand(Base):
     name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
 
     # Relationships
-    devices: Mapped[List["Device"]] = relationship("Device", back_populates="device_brand")
-    
+    models: Mapped[List["DeviceModel"]] = relationship("DeviceModel", back_populates="device_brand")
+
+
+class DeviceModel(Base):
+    __tablename__ = "device_models"
+
+    # Table Columns
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String(50), nullable=False)
+
+    # ForeignKeys
+    device_type_id: Mapped[int] = mapped_column(ForeignKey("device_types.id"), index=True, nullable=False)
+    device_brand_id: Mapped[int] = mapped_column(ForeignKey("device_brands.id"), index=True, nullable=False)
+
+    # Relationships
+    device_type: Mapped["DeviceType"] = relationship("DeviceType", back_populates="models")
+    device_brand: Mapped["DeviceBrand"] = relationship("DeviceBrand", back_populates="models")
+    devices: Mapped[List["Device"]] = relationship("Device", back_populates="device_model")
+
+
 class Device(Base):
     __tablename__ = "devices"
 
     # Table Columns
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    model: Mapped[str] = mapped_column(String(30), index=True, nullable=False)
     serial_number: Mapped[Optional[str]] = mapped_column(String(50), unique=True, index=True, nullable=True)
 
     # ForeignKeys
     customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"), index=True, nullable=False)
-    device_type_id: Mapped[int] = mapped_column(ForeignKey("device_types.id"), index=True, nullable=False)
-    device_brand_id: Mapped[int] = mapped_column(ForeignKey("device_brands.id"), index=True, nullable=False)
+    device_model_id: Mapped[int] = mapped_column(ForeignKey("device_models.id"), index=True, nullable=False)
 
     # Relationships
     customer: Mapped["Customer"] = relationship("Customer", back_populates="devices")
-    device_type: Mapped["DeviceType"] = relationship("DeviceType", back_populates="devices")
-    device_brand: Mapped["DeviceBrand"] = relationship("DeviceBrand", back_populates="devices")
+    device_model: Mapped["DeviceModel"] = relationship("DeviceModel", back_populates="devices")
     repairs_orders: Mapped[List["RepairOrder"]] = relationship("RepairOrder", back_populates="device")
     storage: Mapped[Optional["Storage"]] = relationship("Storage", back_populates="device")
 
+    
 # =========================================================================
 # TABLE TECHNICIANS
 # =========================================================================

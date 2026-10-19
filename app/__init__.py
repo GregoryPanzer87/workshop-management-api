@@ -4,7 +4,7 @@ from .database import (
 )
 
 from .models_repairs import (
-    Customer, DeviceType, DeviceBrand, Device, Technician, RepairOrder, SparePart, 
+    Customer, DeviceType, DeviceBrand, DeviceModel, Device, Technician, RepairOrder, SparePart, 
     OrderSparePart, Service, OrderService, Storage
 )
 
@@ -19,10 +19,12 @@ from .schemas_repairs import (
     DeviceTypeBase, DeviceTypeCreate, DeviceBatchCreate, DeviceTypeResponse, DeviceTypeUpdate,
     # Devices Brands
     DeviceBrandBase, DeviceBrandCreate, DeviceBrandResponse, DeviceBrandUpdate,
+    # Devices Brands
+    DeviceModelBase, DeviceModelCreate, DeviceModelResponse, DeviceModelMinResponse, DeviceModelUpdate,
     # Devices
     DeviceBase, DeviceCreate, DeviceBaseResponse, DeviceResponse, DeviceUpdate, DeviceMinResponse,
     # Repair Orders
-    RepairOrderBase, RepairOrderCreate, RepairOrderBatchCreate, 
+    RepairOrderBase, StatusOrder, RepairOrderCreate, RepairOrderBatchCreate, 
     RepairOrderResponse, RepairOrderDetailResponse, RepairOrderUpdate,
     RepairOrderUpdateStatus, RepairOrderUpdateDescription, RepairOrderUpdateTechnician,
     # Technician
@@ -52,7 +54,7 @@ from .schemas_others import (
 )
 
 from .crud import (
-    crud_customer, crud_device_type, crud_device_brand, crud_device, crud_employee, 
+    crud_customer, crud_device_type, crud_device_brand, crud_device_model, crud_device, crud_employee, 
     crud_technician, crud_repair_order, crud_spare_part, crud_order_spare_part, 
     crud_service, crud_order_service, crud_expense, crud_attendance,
     crud_user, crud_audit, crud_storage, crud_exchange_rate, ModelType, CRUDBase

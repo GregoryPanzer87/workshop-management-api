@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from app.api.deps import get_current_user, require_roles
 from app import (
     Storage, StorageCreate, StorageResponse, 
-    StorageUpdate, Device, User, 
+    StorageUpdate, Device, DeviceModel, User, 
     crud_storage, crud_device,
     get_db
 )
@@ -19,8 +19,9 @@ router = APIRouter(prefix="/storage", tags=["Storage"])
 
 STORAGE_LOAD_OPTIONS = [
     joinedload(Storage.device).joinedload(Device.customer),
-    joinedload(Storage.device).joinedload(Device.device_type),
-    joinedload(Storage.device).joinedload(Device.device_brand),
+    joinedload(Storage.device).joinedload(Device.device_model),
+    joinedload(Storage.device).joinedload(Device.device_model).joinedload(DeviceModel.device_brand),
+    joinedload(Storage.device).joinedload(Device.device_model).joinedload(DeviceModel.device_brand),
 ]
 
 

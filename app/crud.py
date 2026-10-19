@@ -14,6 +14,8 @@ from app import (
     DeviceType, DeviceTypeCreate, DeviceTypeUpdate,
     # Device Brand
     DeviceBrand, DeviceBrandCreate, DeviceBrandUpdate,
+    # Device Model
+    DeviceModel, DeviceModelCreate, DeviceModelUpdate,
     # Device
     Device, DeviceCreate, DeviceUpdate,
     # Employee
@@ -386,6 +388,7 @@ class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
 crud_customer = CRUDBase[Customer, CustomerCreate, CustomerUpdate](Customer)
 crud_device_type = CRUDBase[DeviceType, DeviceTypeCreate, DeviceTypeUpdate](DeviceType)
 crud_device_brand = CRUDBase[DeviceBrand, DeviceBrandCreate, DeviceBrandUpdate](DeviceBrand)
+crud_device_model = CRUDBase[DeviceModel, DeviceModelCreate, DeviceModelUpdate](DeviceModel)
 crud_device = DeviceCRUD(Device)
 crud_employee = CRUDBase[EmployeeDirectory, EmployeeDirectoryCreate, EmployeeDirectoryUpdate](EmployeeDirectory)
 crud_technician = CRUDBase[Technician, TechnicianCreate, TechnicianUpdate](Technician)

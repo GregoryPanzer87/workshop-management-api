@@ -215,7 +215,7 @@ def delete_device_type(
     current_user: User = Depends(get_current_user)
 ):
     """Deletes a device type by ID[cite: 17]."""
-    db_device_type = crud_device_type.get_by_id(device_type_id)
+    db_device_type = crud_device_type.get_by_id(db, id=device_type_id)
     if not db_device_type:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

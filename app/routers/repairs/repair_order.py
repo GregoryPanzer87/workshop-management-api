@@ -11,7 +11,7 @@ from app import (
     RepairOrderDetailResponse, RepairOrderUpdate, 
     RepairOrderUpdateStatus, RepairOrderBatchCreate, 
     RepairOrderUpdateDescription, RepairOrderUpdateTechnician, UserRole,
-    User, Device, Customer, Technician,
+    User, Device, DeviceModel, Customer, Technician,
     crud_repair_order, crud_customer, crud_device, crud_technician
 )
 from app.utils import (
@@ -27,9 +27,9 @@ router = APIRouter(prefix="/repairs_orders", tags=["Repairs Orders"])
 
 REPAIR_ORDER_LOAD_OPTIONS = [
     joinedload(RepairOrder.customer),
-    joinedload(RepairOrder.device).joinedload(Device.device_type),
-    joinedload(RepairOrder.device).joinedload(Device.device_brand),
-    joinedload(RepairOrder.technician)
+    joinedload(RepairOrder.device).joinedload(Device.device_model).joinedload(DeviceModel.device_type),
+    joinedload(RepairOrder.device).joinedload(Device.device_model).joinedload(DeviceModel.device_brand),
+    joinedload(RepairOrder.technician),
 ]
 NOT_FOUND_REPAIR_ORDER = ["Orden de reparación no encontrada"]
 INTEGRITY_ERROR = ["Ocurrió un conflicto al crear la orden de reparación. Verifique los datos ingresados."]
